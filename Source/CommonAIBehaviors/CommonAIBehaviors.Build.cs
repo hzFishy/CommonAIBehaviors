@@ -11,7 +11,9 @@ public class CommonAIBehaviors : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core", "Engine",
-			"AIModule"
+			"GameplayTags",
+			"AIModule", "StateTreeModule",
+			"FishyUtils"
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]

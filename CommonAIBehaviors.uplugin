@@ -18,6 +18,17 @@
 			"Name": "CommonAIBehaviors",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CommonAIBehaviorsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "FishyUtils",
+			"Enabled": true
 		}
 	]
 }
