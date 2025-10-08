@@ -17,4 +17,17 @@ class COMMONAIBEHAVIORS_API UCAIBAIPerceptionComponent : public UAIPerceptionCom
 	----------------------------------------------------------------------------*/
 public:
 	UCAIBAIPerceptionComponent();
+
+	virtual void OnRegister() override;
+
+	virtual void OnUnregister() override;
+
+	
+	/*----------------------------------------------------------------------------
+		Callback
+	----------------------------------------------------------------------------*/
+protected:
+	UFUNCTION() virtual void TargetPerceptionInfoUpdatedCallback(const FActorPerceptionUpdateInfo& UpdateInfo);
+
+	UFUNCTION() virtual void TargetPerceptionForgottenCallback(AActor* ForgottenActor);
 };
