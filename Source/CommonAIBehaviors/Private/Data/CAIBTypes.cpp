@@ -10,45 +10,35 @@
 	----------------------------------------------------------------------------*/
 FCAIBBehaviorId::FCAIBBehaviorId():
 	Id(0)
-{
-}
+{}
 
 FCAIBBehaviorId::FCAIBBehaviorId(FCAIBBehaviorId&& Other):
 	Id(Other.Id)
-{
-}
+{}
 
 FCAIBBehaviorId::FCAIBBehaviorId(const FCAIBBehaviorId& Other):
 	Id(Other.Id)
-{
-}
+{}
 
 FCAIBBehaviorId::FCAIBBehaviorId(uint32 InId):
 	Id(InId)
-{
-}
+{}
+
 
 FCAIBBehaviorRuntimeDataBase::FCAIBBehaviorRuntimeDataBase():
 	bStarted(false)
-{
-}
+{}
 
-FCAIBBehaviorRuntimeDataBase::~FCAIBBehaviorRuntimeDataBase()
-{
-}
+FCAIBBehaviorRuntimeDataBase::~FCAIBBehaviorRuntimeDataBase() {}
 
 void FCAIBBehaviorRuntimeDataBase::Start()
 {
 	bStarted = true;
 }
 
-void FCAIBBehaviorRuntimeDataBase::Tick(float DeltaTime)
-{
-}
+void FCAIBBehaviorRuntimeDataBase::Tick(float DeltaTime) {}
 
-void FCAIBBehaviorRuntimeDataBase::Stop()
-{
-}
+void FCAIBBehaviorRuntimeDataBase::Stop() {}
 
 #if CAIB_WITH_DEBUG
 FFUMessageBuilder FCAIBBehaviorRuntimeDataBase::GetDebugState() const
@@ -56,9 +46,7 @@ FFUMessageBuilder FCAIBBehaviorRuntimeDataBase::GetDebugState() const
 	return FFUMessageBuilder();
 }
 
-void FCAIBBehaviorRuntimeDataBase::DrawDebugState()
-{
-}
+void FCAIBBehaviorRuntimeDataBase::DrawDebugState() {}
 #endif
 
 void FCAIBBehaviorRuntimeDataBase::SetTargetActor(AActor* InActor)
@@ -68,20 +56,13 @@ void FCAIBBehaviorRuntimeDataBase::SetTargetActor(AActor* InActor)
 	OnTargetActorSet();
 }
 
-void FCAIBBehaviorRuntimeDataBase::OnTargetActorSet()
-{
-}
+void FCAIBBehaviorRuntimeDataBase::OnTargetActorSet() {}
 
 ACharacter* FCAIBBehaviorRuntimeDataBase::GetTargetCharacter() const
 {
 	return GetTargetActor<ACharacter>();
 }
 
-FCAIBAIBehaviorBaseFragment::FCAIBAIBehaviorBaseFragment()
-{
-}
+FCAIBAIBehaviorBaseFragment::FCAIBAIBehaviorBaseFragment() {}
 
-FCAIBAIBehaviorDebugMessageEntry::FCAIBAIBehaviorDebugMessageEntry()
-{
-}
-
+FCAIBAIBehaviorDebugMessageEntry::FCAIBAIBehaviorDebugMessageEntry() {}

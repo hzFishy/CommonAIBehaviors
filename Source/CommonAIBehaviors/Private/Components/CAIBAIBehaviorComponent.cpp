@@ -3,6 +3,7 @@
 
 #include "Components/CAIBAIBehaviorComponent.h"
 #if WITH_EDITORONLY_DATA
+#include "Data/CAIBPatrolTypes.h"
 #include "Splines/CAIBPatrolSplineActor.h"
 #include "Splines/CAIBPatrolSplineComponent.h"
 #endif

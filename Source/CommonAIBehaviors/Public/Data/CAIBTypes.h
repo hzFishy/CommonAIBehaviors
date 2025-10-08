@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "AITypes.h"
-#include "StructUtils/InstancedStruct.h"
 #include "Core/CAIBCore.h"
 #include "Utility/FUUtilities.h"
 #include "CAIBTypes.generated.h"
@@ -51,6 +49,7 @@ protected:
 	uint32 Id;
 };
 
+
 USTRUCT()
 struct COMMONAIBEHAVIORS_API FCAIBBehaviorRuntimeDataBase
 {
@@ -69,8 +68,16 @@ public:
 	virtual void Stop();
 
 #if CAIB_WITH_DEBUG
+	/**
+	 * Used to return custom runtime data.
+	 * Called each tick.
+	 */
 	virtual FFUMessageBuilder GetDebugState() const;
 
+	/**
+	 *	Used to draw extra stuff.
+	 *  Called each tick.
+	 */
 	virtual void DrawDebugState();
 #endif
 	
@@ -102,6 +109,7 @@ protected:
 	TWeakObjectPtr<AActor> TargetActor;
 };
 
+
 USTRUCT()
 struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorBaseFragment
 {
@@ -109,6 +117,7 @@ struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorBaseFragment
 	
 	FCAIBAIBehaviorBaseFragment();
 };
+
 
 struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorDebugMessageEntry
 {

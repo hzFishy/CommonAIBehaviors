@@ -5,11 +5,12 @@
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 #include "Data/CAIBTypes.h"
+#include "StructUtils/InstancedStruct.h"
 #include "CAIBAIBehaviorComponent.generated.h"
 
 
 /**
- *  This should be owned by an AI Controller.
+ *  This should be owned by an AI Pawn since most of the data is pawn specific.
  */
 UCLASS(ClassGroup=(CommonAIBehaviors), DisplayName="Common AI Behavior Component", meta=(BlueprintSpawnableComponent))
 class COMMONAIBEHAVIORS_API UCAIBAIBehaviorComponent : public UActorComponent
