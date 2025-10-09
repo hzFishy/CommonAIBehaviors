@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Data/CAIBPerceptionTypes.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "CAIBAIPerceptionComponent.generated.h"
 
@@ -10,6 +11,14 @@ UCLASS(ClassGroup=(CommonAIBehaviors), DisplayName="Common AI Perception Compone
 class COMMONAIBEHAVIORS_API UCAIBAIPerceptionComponent : public UAIPerceptionComponent
 {
 	GENERATED_BODY()
+
+	
+	/*----------------------------------------------------------------------------
+		Properties
+	----------------------------------------------------------------------------*/
+protected:
+	/** Key: SourceId */
+	TMap<int32, CAIBTrackedStimuliSource> TrackedStimuliSources;
 
 	
 	/*----------------------------------------------------------------------------

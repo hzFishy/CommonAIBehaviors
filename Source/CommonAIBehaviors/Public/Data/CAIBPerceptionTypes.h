@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "Perception/AISenseConfig.h"
+#include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISense_Sight.h"
 #include "CAIBPerceptionTypes.generated.h"
@@ -38,4 +38,21 @@ public:
 	
 	// state tree event tag to trigger on first perception
 	// state tree event tag to trigger on perception forgotten
+};
+
+
+struct COMMONAIBEHAVIORS_API CAIBTrackedStimuliSource
+{
+	CAIBTrackedStimuliSource();
+	
+	CAIBTrackedStimuliSource(const FActorPerceptionUpdateInfo& UpdateInfo);
+
+	/** Id of to the stimulus source */
+	int32 TargetId;
+
+	/** Actor associated to the stimulus (can be null) */
+	TWeakObjectPtr<AActor> Target;
+
+	/** Updated stimulus */
+	FAIStimulus LatestStimulus;
 };

@@ -2,6 +2,8 @@
 
 
 #include "Components/CAIBAIPerceptionComponent.h"
+
+#include "Asserts/FUAsserts.h"
 #include "Utility/FUUtilities.h"
 
 	
@@ -43,7 +45,14 @@ void UCAIBAIPerceptionComponent::OnUnregister()
 	----------------------------------------------------------------------------*/
 void UCAIBAIPerceptionComponent::OnNewPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	
+	if (auto* Entry = TrackedStimuliSources.Find(UpdateInfo.TargetId))
+	{
+		Entry->LatestStimulus = UpdateInfo.Stimulus;
+	}
+	else
+	{
+		TrackedStimuliSources.Add(UpdateInfo.TargetId, CAIBTrackedStimuliSource(UpdateInfo));
+	}
 }
 
 void UCAIBAIPerceptionComponent::OnInvalidPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
@@ -53,7 +62,13 @@ void UCAIBAIPerceptionComponent::OnInvalidPerceptionSource(const FActorPerceptio
 
 void UCAIBAIPerceptionComponent::OnPerceptionSourceForgotten(AActor* ForgottenActor)
 {
-	
+	// get hash of Uobject to find it
+	int32 TargetId = -1;
+	auto* Entry = TrackedStimuliSources.Find(TargetId);
+	if (FU_ENSURE(Entry))
+	{
+		
+	}
 }
 
 	
