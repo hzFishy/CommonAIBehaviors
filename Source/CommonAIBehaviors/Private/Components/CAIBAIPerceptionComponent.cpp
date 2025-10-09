@@ -39,13 +39,39 @@ void UCAIBAIPerceptionComponent::OnUnregister()
 
 	
 	/*----------------------------------------------------------------------------
+		Core
+	----------------------------------------------------------------------------*/
+void UCAIBAIPerceptionComponent::OnNewPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
+{
+	
+}
+
+void UCAIBAIPerceptionComponent::OnInvalidPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
+{
+	
+}
+
+void UCAIBAIPerceptionComponent::OnPerceptionSourceForgotten(AActor* ForgottenActor)
+{
+	
+}
+
+	
+	/*----------------------------------------------------------------------------
 		Callback
 	----------------------------------------------------------------------------*/
 void UCAIBAIPerceptionComponent::TargetPerceptionInfoUpdatedCallback(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	if (UpdateInfo.Target.IsValid())
+	if (UpdateInfo.Target.IsValid() && UpdateInfo.Stimulus.IsValid())
 	{
-		
+		if (UpdateInfo.Stimulus.WasSuccessfullySensed())
+		{
+			OnNewPerceptionSource(UpdateInfo);
+		}
+		else
+		{
+			OnInvalidPerceptionSource(UpdateInfo);
+		}
 	}
 }
 
@@ -53,6 +79,6 @@ void UCAIBAIPerceptionComponent::TargetPerceptionForgottenCallback(AActor* Forgo
 {
 	if (IsValid(ForgottenActor))
 	{
-		
+		OnPerceptionSourceForgotten(ForgottenActor);
 	}
 }

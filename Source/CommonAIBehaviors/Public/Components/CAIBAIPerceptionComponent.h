@@ -24,10 +24,21 @@ public:
 
 	
 	/*----------------------------------------------------------------------------
+		Core
+	----------------------------------------------------------------------------*/
+protected:
+	virtual void OnNewPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo);
+	
+	virtual void OnInvalidPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo);
+	
+	virtual void OnPerceptionSourceForgotten(AActor* ForgottenActor);
+	
+	
+	/*----------------------------------------------------------------------------
 		Callback
 	----------------------------------------------------------------------------*/
 protected:
 	UFUNCTION() virtual void TargetPerceptionInfoUpdatedCallback(const FActorPerceptionUpdateInfo& UpdateInfo);
-
+	
 	UFUNCTION() virtual void TargetPerceptionForgottenCallback(AActor* ForgottenActor);
 };

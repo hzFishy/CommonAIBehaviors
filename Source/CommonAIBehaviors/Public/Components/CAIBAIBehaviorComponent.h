@@ -41,6 +41,8 @@ public:
 
 	virtual void OnRegister() override;
 
+	virtual void OnUnregister() override;
+	
 	
 	/*----------------------------------------------------------------------------
 		Core

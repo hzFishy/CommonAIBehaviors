@@ -47,3 +47,15 @@ void UCAIBAIBehaviorComponent::OnRegister()
 	}
 #endif
 }
+
+void UCAIBAIBehaviorComponent::OnUnregister()
+{
+	Super::OnUnregister();
+
+#if WITH_EDITORONLY_DATA
+	if (SplineRenderUpdateHandle.IsValid())
+	{
+		UActorComponent::MarkRenderStateDirtyEvent.Remove(SplineRenderUpdateHandle);
+	}
+#endif
+}

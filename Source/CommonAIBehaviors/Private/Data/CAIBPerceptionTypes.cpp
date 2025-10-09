@@ -9,7 +9,7 @@
 	----------------------------------------------------------------------------*/
 UCAIBAISense_Sight::UCAIBAISense_Sight()
 {
-	NotifyType = EAISenseNotifyType::OnEveryPerception;
+	//NotifyType = EAISenseNotifyType::OnEveryPerception;
 }
 
 UCAIBAISenseConfig_Sight::UCAIBAISenseConfig_Sight()
