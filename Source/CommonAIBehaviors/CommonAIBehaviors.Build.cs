@@ -10,7 +10,7 @@ public class CommonAIBehaviors : ModuleRules
 		
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "Engine",
+			"Core", "Engine", "CoreUObject",
 			"GameplayTags",
 			"AIModule", "StateTreeModule",
 			"FishyUtils"
@@ -18,7 +18,6 @@ public class CommonAIBehaviors : ModuleRules
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"CoreUObject",
 			"Slate", "SlateCore",
 		});
 	}

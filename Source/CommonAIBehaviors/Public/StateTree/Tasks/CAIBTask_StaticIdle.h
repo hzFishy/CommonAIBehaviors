@@ -35,10 +35,10 @@ struct COMMONAIBEHAVIORS_API FCAIBTask_StaticIdle : public FStateTreeTaskCommonB
 {
 	GENERATED_BODY()
 
-	FCAIBTask_StaticIdle();
-	
 	using FInstanceDataType = FCAIBStaticIdleInstanceData;
 
+	FCAIBTask_StaticIdle();
+	
 	
 	/*----------------------------------------------------------------------------
 		Defauls

@@ -26,8 +26,11 @@ USTRUCT(DisplayName="Common Patrol Task", Category="Common AI Behaviors")
 struct COMMONAIBEHAVIORS_API FCAIBTask_Patrol : public FStateTreeTaskCommonBase
 {
 	GENERATED_BODY()
-
+	
 	using FInstanceDataType = FCAIBPatrolInstanceData;
+
+	FCAIBTask_Patrol();
+	
 
 	
 	/*----------------------------------------------------------------------------

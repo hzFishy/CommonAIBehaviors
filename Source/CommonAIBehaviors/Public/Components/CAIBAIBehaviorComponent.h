@@ -25,7 +25,7 @@ protected:
 	UPROPERTY(EditAnywhere, DisplayName="AI Behavior Fragments", Category="CommonAIBehaviors", meta=(ExcludeBaseStruct))
 	TArray<TInstancedStruct<FCAIBAIBehaviorBaseFragment>> AIBehaviorFragments;
 
-	UPROPERTY(EditAnywhere, Category="CommonAIBehaviors", BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, Category="CommonAIBehaviors", BlueprintReadOnly, DisplayName="Initial Event State Tree")
 	FGameplayTag InitialEvent;
 
 #if WITH_EDITORONLY_DATA

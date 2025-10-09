@@ -6,6 +6,7 @@
 #include "Asserts/FUAsserts.h"
 #include "Components/CAIBAIBehaviorComponent.h"
 #include "Core/CAIBBehaviorSubsystem.h"
+#include "Data/CAIBPatrolTypes.h"
 #include "GameFramework/Character.h"
 #include "Splines/CAIBPatrolSplineActor.h"
 
@@ -14,6 +15,12 @@
 		Defaults
 	----------------------------------------------------------------------------*/
 FCAIBPatrolInstanceData::FCAIBPatrolInstanceData() {}
+
+
+FCAIBTask_Patrol::FCAIBTask_Patrol()
+{
+	bShouldCallTick = false;
+}
 
 EStateTreeRunStatus FCAIBTask_Patrol::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {

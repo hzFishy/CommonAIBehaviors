@@ -3,10 +3,38 @@
 #pragma once
 
 
+#include "NativeGameplayTags.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISense_Sight.h"
 #include "CAIBPerceptionTypes.generated.h"
+
+
+class UCAIBAIPerceptionComponent;
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_SIGHT);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_HEARING);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_TOUCH);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_DAMAGE);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_TEAM);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_PREDICTION);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_BLUEPRINT);
+
+
+UINTERFACE(MinimalAPI)
+class UCAIBSenseInterface : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class COMMONAIBEHAVIORS_API ICAIBSenseInterface
+{
+	GENERATED_BODY()
+
+public:
+	virtual FGameplayTag GetSenseTag() const;
+
+	static FGameplayTag StaticGetSenseTag(const UObject* Object);
+};
 
 
 UCLASS(DisplayName="Common AI Sense Sight")
@@ -41,18 +69,85 @@ public:
 };
 
 
-struct COMMONAIBEHAVIORS_API CAIBTrackedStimuliSource
+USTRUCT(BlueprintType, DisplayName="Common AI Stimulus")
+struct COMMONAIBEHAVIORS_API FCAIBAIStimulus
 {
-	CAIBTrackedStimuliSource();
+	GENERATED_BODY()
 	
-	CAIBTrackedStimuliSource(const FActorPerceptionUpdateInfo& UpdateInfo);
+	FCAIBAIStimulus();
+	FCAIBAIStimulus(const FAIStimulus& Stimulus);
+	FCAIBAIStimulus(const FCAIBAIStimulus& PreviousStim, const FAIStimulus& NewStimulus);
+
+public:
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	float Strength;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	FVector StimulusLocation;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	FVector ReceiverLocation;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	FName Tag;
+
+	FAISenseID Type;
+
+	float MaxAge;
+
+	float CurrentAge;
+
+	bool IsExpired() const { return CurrentAge >= MaxAge; }
+	
+protected:
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	uint32 bSuccessfullySensed:1;
+
+	uint32 bExpired:1;
+	
+};
+
+USTRUCT(BlueprintType, DisplayName="Common AI Tracked Stimuli Source")
+struct COMMONAIBEHAVIORS_API FCAIBTrackedStimuliSource
+{
+	GENERATED_BODY()
+	
+	FCAIBTrackedStimuliSource();
+	
+	FCAIBTrackedStimuliSource(const FActorPerceptionUpdateInfo& UpdateInfo);
 
 	/** Id of to the stimulus source */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	int32 TargetId;
 
 	/** Actor associated to the stimulus (can be null) */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	TWeakObjectPtr<AActor> Target;
 
 	/** Updated stimulus */
-	FAIStimulus LatestStimulus;
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	FCAIBAIStimulus LatestStimulus;
+};
+
+USTRUCT()
+struct COMMONAIBEHAVIORS_API FCAIBTrackedSensesContainer
+{
+	GENERATED_BODY()
+
+	FCAIBTrackedSensesContainer();
+	
+	FCAIBTrackedSensesContainer(UCAIBAIPerceptionComponent* Comp, const FActorPerceptionUpdateInfo& UpdateInfo);
+
+	void AddOrUpdateSense(const FActorPerceptionUpdateInfo& UpdateInfo);
+
+	void RemoveSense(FGameplayTag SenseTag);
+
+	const TMap<FGameplayTag, FCAIBTrackedStimuliSource>& GetMap() { return PerSenseSources; };
+	TMap<FGameplayTag, FCAIBTrackedStimuliSource>& GetMutableMap() { return PerSenseSources; };
+	
+protected:
+	TWeakObjectPtr<UCAIBAIPerceptionComponent> PerceptionComponent;
+	
+	/** Key: sense gameplay tag, see ICAIBSenseInterface */
+	TMap<FGameplayTag, FCAIBTrackedStimuliSource> PerSenseSources;
 };

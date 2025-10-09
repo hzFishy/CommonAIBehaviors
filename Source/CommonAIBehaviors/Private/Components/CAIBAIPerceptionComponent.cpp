@@ -2,9 +2,18 @@
 
 
 #include "Components/CAIBAIPerceptionComponent.h"
-
 #include "Asserts/FUAsserts.h"
 #include "Utility/FUUtilities.h"
+
+
+FCAIBStimuliExpired::FCAIBStimuliExpired():
+	SourceId(0)
+{}
+
+FCAIBStimuliExpired::FCAIBStimuliExpired(int32 InId, FGameplayTag InTag):
+	SourceId(InId),
+	SenseTag(InTag)
+{}
 
 	
 	/*----------------------------------------------------------------------------
@@ -24,7 +33,6 @@ void UCAIBAIPerceptionComponent::OnRegister()
 #endif
 
 	OnTargetPerceptionInfoUpdated.AddUniqueDynamic(this, &ThisClass::TargetPerceptionInfoUpdatedCallback);
-	OnTargetPerceptionForgotten.AddUniqueDynamic(this, &ThisClass::TargetPerceptionForgottenCallback);
 }
 
 void UCAIBAIPerceptionComponent::OnUnregister()
@@ -36,7 +44,14 @@ void UCAIBAIPerceptionComponent::OnUnregister()
 #endif
 
 	OnTargetPerceptionInfoUpdated.RemoveDynamic(this, &ThisClass::TargetPerceptionInfoUpdatedCallback);
-	OnTargetPerceptionForgotten.RemoveDynamic(this, &ThisClass::TargetPerceptionForgottenCallback);
+}
+
+void UCAIBAIPerceptionComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	TickTrackedSources(DeltaTime);
 }
 
 	
@@ -45,30 +60,61 @@ void UCAIBAIPerceptionComponent::OnUnregister()
 	----------------------------------------------------------------------------*/
 void UCAIBAIPerceptionComponent::OnNewPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	if (auto* Entry = TrackedStimuliSources.Find(UpdateInfo.TargetId))
+	if (auto* Entry = TrackedSources.Find(UpdateInfo.TargetId))
 	{
-		Entry->LatestStimulus = UpdateInfo.Stimulus;
+		Entry->AddOrUpdateSense(UpdateInfo);
 	}
 	else
 	{
-		TrackedStimuliSources.Add(UpdateInfo.TargetId, CAIBTrackedStimuliSource(UpdateInfo));
+		TrackedSources.Add(UpdateInfo.TargetId, FCAIBTrackedSensesContainer(this, UpdateInfo));
 	}
 }
 
 void UCAIBAIPerceptionComponent::OnInvalidPerceptionSource(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	
-}
-
-void UCAIBAIPerceptionComponent::OnPerceptionSourceForgotten(AActor* ForgottenActor)
-{
-	// get hash of Uobject to find it
-	int32 TargetId = -1;
-	auto* Entry = TrackedStimuliSources.Find(TargetId);
+	auto* Entry = TrackedSources.Find(UpdateInfo.TargetId);
 	if (FU_ENSURE(Entry))
 	{
-		
+		Entry->AddOrUpdateSense(UpdateInfo);
 	}
+}
+
+void UCAIBAIPerceptionComponent::OnPerceptionSourceForgotten(int32 SourceId, FGameplayTag SenseTag)
+{
+	ExpiredSources.Emplace(FCAIBStimuliExpired(SourceId, SenseTag));
+}
+
+void UCAIBAIPerceptionComponent::TickTrackedSources(float DeltaTime)
+{
+	if (TrackedSources.IsEmpty()) { return; }
+	
+	ExpiredSources.Reserve(TrackedSources.Num());
+	
+	// age stimuli
+	for (auto& TrackedPair : TrackedSources)
+	{
+		auto& Container = TrackedPair.Value;
+		
+		for (auto& StimuliPair : Container.GetMutableMap())
+		{
+			auto& StimSenseTag = StimuliPair.Key;
+			auto& StimData = StimuliPair.Value;
+
+			StimData.LatestStimulus.CurrentAge += DeltaTime;
+			if (StimData.LatestStimulus.IsExpired())
+			{
+				OnPerceptionSourceForgotten(StimData.TargetId, StimSenseTag);
+			}
+		}
+	}
+
+	// removed expired stims
+	for (auto& ExpiredSource : ExpiredSources)
+	{
+		TrackedSources[ExpiredSource.SourceId].RemoveSense(ExpiredSource.SenseTag);
+	}
+
+	ExpiredSources.Empty();
 }
 
 	
@@ -87,13 +133,5 @@ void UCAIBAIPerceptionComponent::TargetPerceptionInfoUpdatedCallback(const FActo
 		{
 			OnInvalidPerceptionSource(UpdateInfo);
 		}
-	}
-}
-
-void UCAIBAIPerceptionComponent::TargetPerceptionForgottenCallback(AActor* ForgottenActor)
-{
-	if (IsValid(ForgottenActor))
-	{
-		OnPerceptionSourceForgotten(ForgottenActor);
 	}
 }

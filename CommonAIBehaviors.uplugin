@@ -29,6 +29,10 @@
 		{
 			"Name": "FishyUtils",
 			"Enabled": true
+		},
+		{
+			"Name": "StateTree",
+			"Enabled": true
 		}
 	]
 }
