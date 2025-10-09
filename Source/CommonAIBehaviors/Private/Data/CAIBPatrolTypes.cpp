@@ -55,6 +55,15 @@ void FCAIBPatrolBaseRuntimeData::Tick(float DeltaTime)
 	}
 }
 
+void FCAIBPatrolBaseRuntimeData::Resume()
+{
+	Super::Resume();
+
+	// TODO: move to latest target point
+	// TODO: we need to know if we go back to latest index or if we reset the index to 0
+	// TODO: option to reset or not progress time at the point (should be true if we reset to 0)
+}
+
 void FCAIBPatrolBaseRuntimeData::Stop()
 {
 	Super::Stop();
@@ -77,6 +86,8 @@ void FCAIBPatrolBaseRuntimeData::Stop()
 #if CAIB_WITH_DEBUG
 FFUMessageBuilder FCAIBPatrolBaseRuntimeData::GetDebugState() const
 {
+	if (!IsActive()) { return FFUMessageBuilder(); }
+	
 	return FFUMessageBuilder()
 	       .Append("Patrol Data")
 	       .NewLine("Target Location: " + FU::Utils::PrintCompactVector(CurrentTargetLocation));
@@ -84,6 +95,8 @@ FFUMessageBuilder FCAIBPatrolBaseRuntimeData::GetDebugState() const
 
 void FCAIBPatrolBaseRuntimeData::DrawDebugState()
 {
+	if (!IsActive()) { return; }
+	
 	FU::Draw::DrawDebugSphereFrame(
 		GWorld,
 		CurrentTargetLocation,
@@ -206,6 +219,14 @@ void FCAIBPatrolSplineRuntimeData::Start()
 	Super::Start();
 }
 
+void FCAIBPatrolSplineRuntimeData::Pause()
+{
+	Super::Pause();
+
+	// stop any anims that might be playing
+	StopPlayingAnim();
+}
+
 void FCAIBPatrolSplineRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -298,15 +319,8 @@ void FCAIBPatrolSplineRuntimeData::OnPreStartMove()
 {
 	Super::OnPreStartMove();
 	
-	if (TargetCharacterAnimInstance.IsValid() && SelectedWaitAnim != nullptr)
-	{
-		TargetCharacterAnimInstance->Montage_Stop(
-			0.2,
-			SelectedWaitAnim->AnimMontage.Get()
-		);
-	}
+	StopPlayingAnim();
 
-	SelectedWaitAnim = nullptr;
 }
 
 void FCAIBPatrolSplineRuntimeData::OnStartedMove()
@@ -366,6 +380,18 @@ void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
 		WaitElapsedTime = 0;
 		WaitTargetTime = SelectedWaitTime;
 	}
+}
+
+void FCAIBPatrolSplineRuntimeData::StopPlayingAnim()
+{
+	if (TargetCharacterAnimInstance.IsValid() && SelectedWaitAnim != nullptr)
+	{
+		TargetCharacterAnimInstance->Montage_Stop(
+			0.2,
+			SelectedWaitAnim->AnimMontage.Get()
+		);
+	}
+	SelectedWaitAnim = nullptr;
 }
 
 

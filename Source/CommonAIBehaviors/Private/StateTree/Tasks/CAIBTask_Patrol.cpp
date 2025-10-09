@@ -50,10 +50,34 @@ EStateTreeRunStatus FCAIBTask_Patrol::EnterState(FStateTreeExecutionContext& Con
 		return EStateTreeRunStatus::Failed;
 	}
 
-	auto SharedData = PatrolFragment->Data.GetPtr<FCAIBAIBehaviorPatrolBaseData>()->MakeSharedRuntime();
-	SharedData->SetTargetActor(InstanceData.Character.Get());
-	SharedData->CachedPatrolFragment = PatrolFragment;
-	InstanceData.BehaviorId = BehaviorSubsystem->AddActiveBehavior(SharedData);
+	// check if we ran this previously
+	// we need to get the behavior id, previously linked to that object
+
+	auto* CachedId = BehaviorSubsystem->GetCachedBehavioridSafe(FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_Patrol::StaticStruct()));
+	if (CachedId)
+	{
+		InstanceData.BehaviorId = *CachedId;
+	}
+
+	const bool bDidAlreadyRun = BehaviorSubsystem->HasBehavior(InstanceData.BehaviorId);
+
+	if (bDidAlreadyRun)
+	{
+		BehaviorSubsystem->ResumeBehavior(InstanceData.BehaviorId);
+	}
+	else
+	{
+		auto SharedData = PatrolFragment->Data.GetPtr<FCAIBAIBehaviorPatrolBaseData>()->MakeSharedRuntime();
+		SharedData->SetTargetActor(InstanceData.Character.Get());
+		SharedData->CachedPatrolFragment = PatrolFragment;
+		InstanceData.BehaviorId = BehaviorSubsystem->AddActiveBehavior(SharedData);
+
+		BehaviorSubsystem->CacheNewBehaviorid(
+			FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_Patrol::StaticStruct()),
+			InstanceData.BehaviorId
+		);
+	}
+
 	
 	return EStateTreeRunStatus::Running;
 }
@@ -66,7 +90,8 @@ void FCAIBTask_Patrol::ExitState(FStateTreeExecutionContext& Context, const FSta
 	{
 		if (auto* BehaviorSubsystem = Context.GetWorld()->GetSubsystem<UCAIBBehaviorSubsystem>())
 		{
-			BehaviorSubsystem->StopAndRemoveBehavior(InstanceData.BehaviorId);
+			// put to "sleep" the behavior, will take it back when this state will be re-entered
+			BehaviorSubsystem->PauseBehavior(InstanceData.BehaviorId);
 		}
 	}
 }

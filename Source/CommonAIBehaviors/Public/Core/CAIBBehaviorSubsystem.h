@@ -22,6 +22,10 @@ class COMMONAIBEHAVIORS_API UCAIBBehaviorSubsystem : public UTickableWorldSubsys
 public:
 	TMap<FCAIBBehaviorId, TSharedPtr<FCAIBBehaviorRuntimeDataBase>> RuntimeBehaviors;
 
+	/**
+	 * This works as long as there is only one use of task type per state tree.
+	 * TODO: add parent state in the id
+	 */
 	TMap<FCAIBStateTreeCacheId, FCAIBBehaviorId> CachedStateTreeBehaviorIds;
 	
 	uint32 LatestBehaviorId;

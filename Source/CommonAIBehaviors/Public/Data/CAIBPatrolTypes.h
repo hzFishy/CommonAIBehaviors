@@ -74,9 +74,11 @@ public:
 	virtual void OnTargetActorSet() override;
 	
 	virtual void Start() override;
-
+	
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void Resume() override;
+	
 	virtual void Stop() override;
 
 #if CAIB_WITH_DEBUG
@@ -124,6 +126,8 @@ public:
 	
 	virtual void Start() override;
 
+	virtual void Pause() override;
+	
 	virtual void Tick(float DeltaTime) override;
 
 #if CAIB_WITH_DEBUG
@@ -153,6 +157,8 @@ protected:
 	virtual void OnStartedMove() override;
 	
 	virtual void OnTargetPointReached() override;
+
+	void StopPlayingAnim();
 };
 
 
