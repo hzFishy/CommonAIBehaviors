@@ -11,8 +11,8 @@
 #include "Splines/CAIBPatrolSplineActor.h"
 #include "Splines/CAIBPatrolSplineComponent.h"
 
-
-/*----------------------------------------------------------------------------
+	
+	/*----------------------------------------------------------------------------
 		Patrol
 	----------------------------------------------------------------------------*/
 FCAIBPatrolSplinePointDataWaitAnimation::FCAIBPatrolSplinePointDataWaitAnimation():

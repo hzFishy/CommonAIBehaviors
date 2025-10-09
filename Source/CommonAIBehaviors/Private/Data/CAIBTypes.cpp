@@ -25,8 +25,17 @@ FCAIBBehaviorId::FCAIBBehaviorId(uint32 InId):
 {}
 
 
+FCAIBStateTreeCacheId::FCAIBStateTreeCacheId() {}
+
+FCAIBStateTreeCacheId::FCAIBStateTreeCacheId(const UStateTree* InStateTree, const UScriptStruct* InTaskType):
+	StateTree(InStateTree),
+	TaskType(InTaskType)
+{}
+
+
 FCAIBBehaviorRuntimeDataBase::FCAIBBehaviorRuntimeDataBase():
-	bStarted(false)
+	bStarted(false),
+	bActive(false)
 {}
 
 FCAIBBehaviorRuntimeDataBase::~FCAIBBehaviorRuntimeDataBase() {}
@@ -34,11 +43,27 @@ FCAIBBehaviorRuntimeDataBase::~FCAIBBehaviorRuntimeDataBase() {}
 void FCAIBBehaviorRuntimeDataBase::Start()
 {
 	bStarted = true;
+	bActive = true;
+}
+
+bool FCAIBBehaviorRuntimeDataBase::CanTick()
+{
+	return bActive;
 }
 
 void FCAIBBehaviorRuntimeDataBase::Tick(float DeltaTime) {}
 
 void FCAIBBehaviorRuntimeDataBase::Stop() {}
+
+void FCAIBBehaviorRuntimeDataBase::Pause()
+{
+	bActive = false;
+}
+
+void FCAIBBehaviorRuntimeDataBase::Resume()
+{
+	bActive = true;
+}
 
 #if CAIB_WITH_DEBUG
 FFUMessageBuilder FCAIBBehaviorRuntimeDataBase::GetDebugState() const

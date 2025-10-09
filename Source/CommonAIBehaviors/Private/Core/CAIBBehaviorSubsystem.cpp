@@ -35,7 +35,7 @@ void UCAIBBehaviorSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	TickActiveBehaviors(DeltaTime);
+	TickBehaviors(DeltaTime);
 #if CAIB_WITH_DEBUG
 	TickDebugMessages(DeltaTime);
 #endif
@@ -61,20 +61,56 @@ FCAIBBehaviorId UCAIBBehaviorSubsystem::MakeUniqueId()
 	return FCAIBBehaviorId(LatestBehaviorId);
 }
 
-FCAIBBehaviorId UCAIBBehaviorSubsystem::AddBehavior(TSharedPtr<FCAIBBehaviorRuntimeDataBase> Val)
+FCAIBBehaviorId UCAIBBehaviorSubsystem::AddActiveBehavior(TSharedPtr<FCAIBBehaviorRuntimeDataBase> Val)
 {
 	if (!FU_ENSURE_VALID(Val->GetTargetActor())) { return FCAIBBehaviorId(0); }
 	
 	auto Id = MakeUniqueId();
-	ActiveBehaviors.Add(Id, Val);
+	RuntimeBehaviors.Add(Id, Val);
 	return Id;
+}
+
+bool UCAIBBehaviorSubsystem::HasBehavior(const FCAIBBehaviorId& BehaviorId) const
+{
+	return RuntimeBehaviors.Contains(BehaviorId);
+}
+
+void UCAIBBehaviorSubsystem::PauseBehavior(const FCAIBBehaviorId& BehaviorId)
+{
+	auto& RuntimeBehavior = RuntimeBehaviors[BehaviorId];
+	RuntimeBehavior->Pause();
+}
+
+void UCAIBBehaviorSubsystem::ResumeBehavior(const FCAIBBehaviorId& BehaviorId)
+{
+	auto& RuntimeBehavior = RuntimeBehaviors[BehaviorId];
+	RuntimeBehavior->Resume();
 }
 
 void UCAIBBehaviorSubsystem::StopAndRemoveBehavior(const FCAIBBehaviorId& BehaviorId)
 {
-	auto BehaviorData = ActiveBehaviors.FindAndRemoveChecked(BehaviorId);
+	auto RuntimeBehavior = RuntimeBehaviors.FindAndRemoveChecked(BehaviorId);
 
-	BehaviorData->Stop();
+	RuntimeBehavior->Stop();
+}
+
+void UCAIBBehaviorSubsystem::CacheNewBehaviorid(const FCAIBStateTreeCacheId& CacheId, const FCAIBBehaviorId& BehaviorId)
+{
+	CachedStateTreeBehaviorIds.Emplace(CacheId, BehaviorId);
+}
+
+const FCAIBBehaviorId& UCAIBBehaviorSubsystem::GetCachedBehaviorid(const FCAIBStateTreeCacheId& CacheId)
+{
+	return CachedStateTreeBehaviorIds[CacheId];
+}
+
+FCAIBBehaviorId* UCAIBBehaviorSubsystem::GetCachedBehavioridSafe(const FCAIBStateTreeCacheId& CacheId)
+{
+	if (auto* Id = CachedStateTreeBehaviorIds.Find(CacheId))
+	{
+		return Id;
+	}
+	return nullptr;
 }
 
 uint32 UCAIBBehaviorSubsystem::AddDebugMessage(const FCAIBAIBehaviorDebugMessageEntry& Entry)
@@ -89,9 +125,9 @@ void UCAIBBehaviorSubsystem::RemoveDebugMessage(uint32 Id)
 	PermanentDebugMessages.Remove(Id);
 }
 
-void UCAIBBehaviorSubsystem::TickActiveBehaviors(float DeltaTime)
+void UCAIBBehaviorSubsystem::TickBehaviors(float DeltaTime)
 {
-	for (auto It = ActiveBehaviors.CreateIterator(); It; ++It)
+	for (auto It = RuntimeBehaviors.CreateIterator(); It; ++It)
 	{
 		auto& Id = It.Key();
 		auto* RuntimeData = It.Value().Get();
@@ -101,8 +137,8 @@ void UCAIBBehaviorSubsystem::TickActiveBehaviors(float DeltaTime)
 		{
 			RuntimeData->Start();
 		}
-		// otherwise, tick
-		else
+		// otherwise, tick (by default only active behaviors will tick)
+		else if (RuntimeData->CanTick())
 		{
 			RuntimeData->Tick(DeltaTime);
 		}

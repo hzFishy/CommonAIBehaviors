@@ -53,7 +53,7 @@ EStateTreeRunStatus FCAIBTask_Patrol::EnterState(FStateTreeExecutionContext& Con
 	auto SharedData = PatrolFragment->Data.GetPtr<FCAIBAIBehaviorPatrolBaseData>()->MakeSharedRuntime();
 	SharedData->SetTargetActor(InstanceData.Character.Get());
 	SharedData->CachedPatrolFragment = PatrolFragment;
-	InstanceData.BehaviorId = BehaviorSubsystem->AddBehavior(SharedData);
+	InstanceData.BehaviorId = BehaviorSubsystem->AddActiveBehavior(SharedData);
 	
 	return EStateTreeRunStatus::Running;
 }

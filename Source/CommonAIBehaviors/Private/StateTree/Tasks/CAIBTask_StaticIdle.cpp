@@ -10,9 +10,7 @@
 #include "GameFramework/Character.h"
 
 
-FCAIBStaticIdleInstanceData::FCAIBStaticIdleInstanceData():
-	DebugId(0)
-{}
+FCAIBStaticIdleInstanceData::FCAIBStaticIdleInstanceData() {}
 
 FCAIBTask_StaticIdle::FCAIBTask_StaticIdle()
 {
@@ -58,31 +56,38 @@ EStateTreeRunStatus FCAIBTask_StaticIdle::EnterState(FStateTreeExecutionContext&
 	{
 		return EStateTreeRunStatus::Failed;
 	}
-	
-	// start the phase
-	if (auto* SingleData = StaticIdleFragment->Data.GetPtr<FCAIBStaticIdleBehaviorSingleData>())
-	{
-		// just play and dont care about any other runtime stuff
-		// TODO (perf): async load montage
-		InstanceData.CurrentSingleMontage = SingleData->SoftMontage.LoadSynchronous();
-		InstanceData.Character->PlayAnimMontage(InstanceData.CurrentSingleMontage.Get());
 
-		FCAIBAIBehaviorDebugMessageEntry Entry;
-		Entry.TargetActor = InstanceData.Character.Get();
-		Entry.MessageBuilder
-			.Append("Single Anim Data")
-			.NewLine("CurrentMontage: " + InstanceData.CurrentSingleMontage->GetName());
-		InstanceData.DebugId = BehaviorSubsystem->AddDebugMessage(Entry);
-	}
-	else if (auto* SequenceData = StaticIdleFragment->Data.GetPtr<FCAIBStaticIdleBehaviorSequenceData>())
+	
+	// check if we ran this previously
+	// we need to get the behavior id, previously linked to that object
+
+	auto* CachedId = BehaviorSubsystem->GetCachedBehavioridSafe(FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_StaticIdle::StaticStruct()));
+	if (CachedId)
 	{
-		auto* Character = InstanceData.Character.Get();
-		
+		InstanceData.BehaviorId = *CachedId;
+	}
+
+	const bool bDidAlreadyRun = BehaviorSubsystem->HasBehavior(InstanceData.BehaviorId);
+
+	if (bDidAlreadyRun)
+	{
+		BehaviorSubsystem->ResumeBehavior(InstanceData.BehaviorId);
+	}
+	else
+	{
+		auto* Fragment =  StaticIdleFragment->Data.GetPtr<FCAIBStaticIdleBehaviorBaseData>();
+		// make runtime struct
+		auto RuntimeIdleData = Fragment->MakeSharedRuntime();
+
 		// send it to the subsystem
-		auto SharedData = MakeShared<FCAIBStaticIdleRuntimeData>();
-		SharedData->SetTargetActor(Character);
-		SharedData->SequenceData = SequenceData;
-		InstanceData.SequenceBehaviorId = BehaviorSubsystem->AddBehavior(SharedData);
+		RuntimeIdleData->SetTargetActor(InstanceData.Character.Get());
+		RuntimeIdleData->CachedBaseData = Fragment;
+		InstanceData.BehaviorId = BehaviorSubsystem->AddActiveBehavior(RuntimeIdleData);
+		
+		BehaviorSubsystem->CacheNewBehaviorid(
+			FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_StaticIdle::StaticStruct()),
+			InstanceData.BehaviorId
+		);
 	}
 	
 	return EStateTreeRunStatus::Running;
@@ -95,19 +100,7 @@ void FCAIBTask_StaticIdle::ExitState(FStateTreeExecutionContext& Context, const 
 	auto* BehaviorSubsystem = Context.GetWorld()->GetSubsystem<UCAIBBehaviorSubsystem>();
 	if (FU_ENSURE_VALID(BehaviorSubsystem))
 	{
-		if (InstanceData.CurrentSingleMontage.IsValid())
-		{
-			// for single sequence just stop it
-			InstanceData.CharacterAnimInstance->Montage_Stop(
-				0.2,
-				InstanceData.CurrentSingleMontage.Get()
-			);
-			BehaviorSubsystem->RemoveDebugMessage(InstanceData.DebugId);
-		}
-		else if (InstanceData.SequenceBehaviorId.IsValid())
-		{
-			// to abort sequence we let the subsystem do it
-			BehaviorSubsystem->StopAndRemoveBehavior(InstanceData.SequenceBehaviorId);
-		}
+		// put to "sleep" the behavior, will take it back when this state will be re-entered
+		BehaviorSubsystem->PauseBehavior(InstanceData.BehaviorId);
 	}
 }

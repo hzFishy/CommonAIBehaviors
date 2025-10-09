@@ -2,60 +2,179 @@
 
 
 #include "Data/CAIBIdleTypes.h"
+
+#include "AIController.h"
 #include "GameFramework/Character.h"
+#include "Navigation/PathFollowingComponent.h"
 
 	
 	/*----------------------------------------------------------------------------
 		Static Idle
 	----------------------------------------------------------------------------*/
-FCAIBStaticIdleBehaviorBaseData::FCAIBStaticIdleBehaviorBaseData()
-{
-}
+FCAIBStaticIdleBaseRuntimeData::FCAIBStaticIdleBaseRuntimeData():
+	CachedBaseData(nullptr),
+	StartLocation(FVector::ZeroVector),
+	StartRotation(FRotator::ZeroRotator),
+	bMovingToStart(false)
+{}
 
-
-FCAIBStaticIdleBehaviorSingleData::FCAIBStaticIdleBehaviorSingleData()
-{
-}
-
-
-FCAIBStaticIdleBehaviorSequenceEntryData::FCAIBStaticIdleBehaviorSequenceEntryData():
-	MontagePlayRate(1)
-{
-}
-
-FCAIBStaticIdleBehaviorSequenceData::FCAIBStaticIdleBehaviorSequenceData():
-	SelectionType(ECAIBStaticIdleBehaviorSequenceType::InOrder)
-{
-}
-
-FCAIBAIBehaviorStaticIdleFragment::FCAIBAIBehaviorStaticIdleFragment()
-{
-}
-
-
-FCAIBStaticIdleRuntimeData::FCAIBStaticIdleRuntimeData():
-	SequenceData(nullptr),
-	CurrentIndex(-1),
-	TargetRelativeTime(0),
-	ElapsedTime(0)
-{
-}
-
-void FCAIBStaticIdleRuntimeData::OnTargetActorSet()
+void FCAIBStaticIdleBaseRuntimeData::OnTargetActorSet()
 {
 	Super::OnTargetActorSet();
 
 	CharacterAnimInstance = GetTargetCharacter()->GetMesh()->GetAnimInstance();
+	Controller = GetTargetCharacter()->GetController<AAIController>();
+	PathFollowingComponent = Controller->GetComponentByClass<UPathFollowingComponent>();
+	StartLocation = GetTargetActor()->GetActorLocation();
+	StartRotation = GetTargetActor()->GetActorRotation();
 }
 
-void FCAIBStaticIdleRuntimeData::Start()
+void FCAIBStaticIdleBaseRuntimeData::Pause()
+{
+	Super::Pause();
+
+	StopCurrentAnimation();
+}
+
+void FCAIBStaticIdleBaseRuntimeData::Resume()
+{
+	Super::Resume();
+
+	if (CachedBaseData->bOnResumeGoBackToStartLocation)
+	{
+		FAIMoveRequest MoveReq(StartLocation);
+		MoveReq.SetUsePathfinding(true);
+		MoveReq.SetAllowPartialPath(false);
+		MoveReq.SetAcceptanceRadius(CachedBaseData->GoBackToStartAcceptanceRadius);
+		MoveReq.SetReachTestIncludesAgentRadius(false);
+
+		auto Result = Controller->MoveTo(MoveReq);
+		if (Result.Code == EPathFollowingRequestResult::RequestSuccessful)
+		{
+			bMovingToStart = true;
+			PathFinishDelegateHandle = PathFollowingComponent->OnRequestFinished.AddLambda(
+			[this] (FAIRequestID RequestId, const FPathFollowingResult& Result)
+				{
+					PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
+
+					if (CachedBaseData->bOnResumeGoBackToStartRotation)
+					{
+						// TODO: smooth it
+						GetTargetActor()->SetActorRotation(StartRotation);
+					}
+					bMovingToStart = false;
+					OnResumeFinished();
+				}
+			);
+		}
+	}
+	else
+	{
+		OnResumeFinished();
+	}
+}
+
+void FCAIBStaticIdleBaseRuntimeData::Stop()
+{
+	Super::Stop();
+
+	StopCurrentAnimation();
+}
+
+void FCAIBStaticIdleBaseRuntimeData::OnResumeFinished()
+{
+	
+}
+
+void FCAIBStaticIdleBaseRuntimeData::StopCurrentAnimation()
+{
+	if (CharacterAnimInstance.IsValid() && CurrentMontage.IsValid())
+	{
+		CharacterAnimInstance->Montage_Stop(
+			0.2,
+			CurrentMontage.Get()
+		);
+	}
+}
+
+
+FCAIBStaticIdleSingleRuntimeData::FCAIBStaticIdleSingleRuntimeData():
+	CachedSingleData(nullptr)
+{}
+
+void FCAIBStaticIdleSingleRuntimeData::Start()
 {
 	Super::Start();
 
+	CachedSingleData = GetCachedDataAs<FCAIBStaticIdleBehaviorSingleData>();
+	PlaySingleAnim();
+}
+
+void FCAIBStaticIdleSingleRuntimeData::Pause()
+{
+	Super::Pause();
+
+	if (PathFinishDelegateHandle.IsValid())
+	{
+		PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
+	}
+}
+
+#if CAIB_WITH_DEBUG
+FFUMessageBuilder FCAIBStaticIdleSingleRuntimeData::GetDebugState() const
+{
+	if (!IsActive()) { return FFUMessageBuilder(); }
+
+	if (bMovingToStart)
+	{
+		return FFUMessageBuilder()
+			.Append("Single Anim Data")
+		   .NewLine("Moving to start");
+	}
+	
+	return FFUMessageBuilder()
+		.Append("Single Anim Data")
+		.NewLine("Montage: " + CurrentMontage->GetName());
+}
+#endif
+
+void FCAIBStaticIdleSingleRuntimeData::OnResumeFinished()
+{
+	Super::OnResumeFinished();
+
+	PlaySingleAnim();
+}
+
+void FCAIBStaticIdleSingleRuntimeData::PlaySingleAnim()
+{
+	auto* LoadedMontage = CachedSingleData->SoftMontage.LoadSynchronous();
+	GetTargetCharacter()->PlayAnimMontage(LoadedMontage);
+	CurrentMontage = LoadedMontage;
+}
+
+
+FCAIBStaticIdleSequenceRuntimeData::FCAIBStaticIdleSequenceRuntimeData():
+	CachedSequenceData(nullptr),
+	CurrentIndex(-1),
+	TargetRelativeTime(0),
+	ElapsedTime(0)
+{}
+
+void FCAIBStaticIdleSequenceRuntimeData::Start()
+{
+	Super::Start();
+
+	CachedSequenceData = GetCachedDataAs<FCAIBStaticIdleBehaviorSequenceData>();
+	
 	GoNextSequenceEntry();
 }
 
-void FCAIBStaticIdleRuntimeData::Tick(float DeltaTime)
+bool FCAIBStaticIdleSequenceRuntimeData::CanTick()
+{
+	return Super::CanTick() && !bMovingToStart;
+}
+
+void FCAIBStaticIdleSequenceRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
@@ -67,78 +186,89 @@ void FCAIBStaticIdleRuntimeData::Tick(float DeltaTime)
 	}
 }
 
-void FCAIBStaticIdleRuntimeData::Stop()
-{
-	Super::Stop();
-
-	// abort sequence
-	if (CharacterAnimInstance.IsValid() && CurrentMontage.IsValid())
-	{
-		CharacterAnimInstance->Montage_Stop(
-			0.2,
-			CurrentMontage.Get()
-		);
-	}
-}
-
 #if CAIB_WITH_DEBUG
-FFUMessageBuilder FCAIBStaticIdleRuntimeData::GetDebugState() const
+FFUMessageBuilder FCAIBStaticIdleSequenceRuntimeData::GetDebugState() const
 {
+	if (!IsActive()) { return FFUMessageBuilder(); }
+
+	if (bMovingToStart)
+	{
+		return FFUMessageBuilder()
+		   .Append("Sequence Anim Data")
+		   .NewLine("Moving to start");
+	}
+	
 	return FFUMessageBuilder()
-	       .Append("Sequence Anim Data")
-	       .NewLine(TEXT("CurrentIndex: %i"), CurrentIndex)
-	       .NewLine("CurrentMontage: " + CurrentMontage->GetName())
-	       .NewLine(TEXT("%.1fs/%.1fs"), ElapsedTime, TargetRelativeTime);
+	   .Append("Sequence Anim Data")
+	   .NewLine(TEXT("CurrentIndex: %i"), CurrentIndex)
+	   .NewLine("Current Montage: " + CurrentMontage->GetName())
+	   .NewLine(TEXT("%.1fs/%.1fs"), ElapsedTime, TargetRelativeTime);
 }
 #endif
 
-int32 FCAIBStaticIdleRuntimeData::GetNextSequenceEntryIndex()
+void FCAIBStaticIdleSequenceRuntimeData::OnResumeFinished()
 {
-	switch (SequenceData->SelectionType)
+	Super::OnResumeFinished();
+
+	if (CachedSequenceData->bOnResumeGoBackToInitalIndex)
 	{
-	case ECAIBStaticIdleBehaviorSequenceType::InOrder:
-		{
-			// simply get next valid index for array
-			int32 NextIndex = CurrentIndex + 1;
-			if (!SequenceData->SequenceEntries.IsValidIndex(NextIndex))
-			{
-				NextIndex = 0;
-			}
-			return NextIndex;
-		}
-	case ECAIBStaticIdleBehaviorSequenceType::RandomExcludeSelf:
-		{
-			// get a random index but exclude the current index
+		CurrentIndex = -1;
+	}
+	if (CachedSequenceData->bOnResumeResetAnimationProgress)
+	{
+		ElapsedTime = 0;
+	}
+	
+	GoNextSequenceEntry();
+}
 
-			if (CurrentIndex < 0)
+int32 FCAIBStaticIdleSequenceRuntimeData::GetNextSequenceEntryIndex()
+{
+	switch (CachedSequenceData->SelectionType)
+	{
+		case ECAIBStaticIdleBehaviorSequenceType::InOrder:
 			{
-				return FMath::RandRange(0, SequenceData->SequenceEntries.Num() - 1);
+				// simply get next valid index for array
+				int32 NextIndex = CurrentIndex + 1;
+				if (!CachedSequenceData->SequenceEntries.IsValidIndex(NextIndex))
+				{
+					NextIndex = 0;
+				}
+				return NextIndex;
 			}
+		case ECAIBStaticIdleBehaviorSequenceType::RandomExcludeSelf:
+			{
+				// get a random index but exclude the current index
 
-			int32 NewIndex = FMath::RandRange(0, SequenceData->SequenceEntries.Num() - 2);
-			if (NewIndex >= CurrentIndex)
-			{
-				NewIndex++;
+				if (CurrentIndex < 0)
+				{
+					return FMath::RandRange(0, CachedSequenceData->SequenceEntries.Num() - 1);
+				}
+
+				int32 NewIndex = FMath::RandRange(0, CachedSequenceData->SequenceEntries.Num() - 2);
+				if (NewIndex >= CurrentIndex)
+				{
+					NewIndex++;
+				}
+				return NewIndex;
 			}
-			return NewIndex;
-		}
-	case ECAIBStaticIdleBehaviorSequenceType::RandomAll:
-		{
-			// get a random index
-			return FMath::RandRange(0, SequenceData->SequenceEntries.Num() - 1);
-		}
+		case ECAIBStaticIdleBehaviorSequenceType::RandomAll:
+			{
+				// get a random index
+				return FMath::RandRange(0, CachedSequenceData->SequenceEntries.Num() - 1);
+			}
 	}
 
 	checkNoEntry()
 	return -1;
 }
 
-void FCAIBStaticIdleRuntimeData::GoNextSequenceEntry()
+void FCAIBStaticIdleSequenceRuntimeData::GoNextSequenceEntry()
 {
 	// select new index and get linked entry
 	CurrentIndex = GetNextSequenceEntryIndex();
 
-	const auto& SequenceEntryData = SequenceData->SequenceEntries[CurrentIndex];
+	const auto& SequenceEntryData = CachedSequenceData->SequenceEntries[CurrentIndex];
 
 	// TODO (perf): async load montage
 	CurrentMontage = SequenceEntryData.SoftMontage.LoadSynchronous();
@@ -156,4 +286,43 @@ void FCAIBStaticIdleRuntimeData::GoNextSequenceEntry()
 	ElapsedTime = 0;
 }
 
-	
+
+FCAIBStaticIdleBehaviorBaseData::FCAIBStaticIdleBehaviorBaseData():
+	bOnResumeGoBackToStartLocation(true),
+	bOnResumeGoBackToStartRotation(true),
+	GoBackToStartAcceptanceRadius(50)
+{}
+
+FCAIBStaticIdleBehaviorBaseData::~FCAIBStaticIdleBehaviorBaseData() {}
+
+TSharedPtr<FCAIBStaticIdleBaseRuntimeData> FCAIBStaticIdleBehaviorBaseData::MakeSharedRuntime() const
+{
+	unimplemented();
+	return TSharedPtr<FCAIBStaticIdleBaseRuntimeData>();
+}
+
+
+FCAIBStaticIdleBehaviorSingleData::FCAIBStaticIdleBehaviorSingleData() {}
+
+TSharedPtr<FCAIBStaticIdleBaseRuntimeData> FCAIBStaticIdleBehaviorSingleData::MakeSharedRuntime() const
+{
+	return MakeShared<FCAIBStaticIdleSingleRuntimeData>();
+}
+
+
+FCAIBStaticIdleBehaviorSequenceEntryData::FCAIBStaticIdleBehaviorSequenceEntryData():
+	MontagePlayRate(1)
+{}
+
+FCAIBStaticIdleBehaviorSequenceData::FCAIBStaticIdleBehaviorSequenceData():
+	SelectionType(ECAIBStaticIdleBehaviorSequenceType::InOrder),
+	bOnResumeGoBackToInitalIndex(false),
+	bOnResumeResetAnimationProgress(true)
+{}
+
+TSharedPtr<FCAIBStaticIdleBaseRuntimeData> FCAIBStaticIdleBehaviorSequenceData::MakeSharedRuntime() const
+{
+	return MakeShared<FCAIBStaticIdleSequenceRuntimeData>();
+}
+
+FCAIBAIBehaviorStaticIdleFragment::FCAIBAIBehaviorStaticIdleFragment() {}

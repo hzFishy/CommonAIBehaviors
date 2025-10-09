@@ -19,7 +19,8 @@ FCAIBStimuliExpired::FCAIBStimuliExpired(int32 InId, FGameplayTag InTag):
 	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
-UCAIBAIPerceptionComponent::UCAIBAIPerceptionComponent()
+UCAIBAIPerceptionComponent::UCAIBAIPerceptionComponent():
+	ElapsedTimeSinceLastTick(0)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 }
@@ -46,12 +47,17 @@ void UCAIBAIPerceptionComponent::OnUnregister()
 	OnTargetPerceptionInfoUpdated.RemoveDynamic(this, &ThisClass::TargetPerceptionInfoUpdatedCallback);
 }
 
-void UCAIBAIPerceptionComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
+void UCAIBAIPerceptionComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	TickTrackedSources(DeltaTime);
+	ElapsedTimeSinceLastTick += DeltaTime;
+	
+	if (!TickInterval.IsSet() || ElapsedTimeSinceLastTick >= TickInterval.GetValue())
+	{
+		TickTrackedSources(ElapsedTimeSinceLastTick);
+		ElapsedTimeSinceLastTick = 0;
+	}
 }
 
 	
@@ -95,10 +101,10 @@ void UCAIBAIPerceptionComponent::TickTrackedSources(float DeltaTime)
 	{
 		auto& Container = TrackedPair.Value;
 		
-		for (auto& StimuliPair : Container.GetMutableMap())
+		for (auto& StimulusPair : Container.GetMutableMap())
 		{
-			auto& StimSenseTag = StimuliPair.Key;
-			auto& StimData = StimuliPair.Value;
+			auto& StimSenseTag = StimulusPair.Key;
+			auto& StimData = StimulusPair.Value;
 
 			StimData.LatestStimulus.CurrentAge += DeltaTime;
 			if (StimData.LatestStimulus.IsExpired())
@@ -108,13 +114,21 @@ void UCAIBAIPerceptionComponent::TickTrackedSources(float DeltaTime)
 		}
 	}
 
-	// removed expired stims
-	for (auto& ExpiredSource : ExpiredSources)
+	if (!ExpiredSources.IsEmpty())
 	{
-		TrackedSources[ExpiredSource.SourceId].RemoveSense(ExpiredSource.SenseTag);
-	}
+		// removed expired stims
+		for (auto& ExpiredSource : ExpiredSources)
+		{
+			RemoveStimulus(ExpiredSource);
+		}
 
-	ExpiredSources.Empty();
+		ExpiredSources.Empty();
+	}
+}
+
+void UCAIBAIPerceptionComponent::RemoveStimulus(const FCAIBStimuliExpired& ExpiredSource)
+{
+	TrackedSources[ExpiredSource.SourceId].RemoveSense(ExpiredSource.SenseTag);
 }
 
 	

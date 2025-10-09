@@ -107,14 +107,14 @@ protected:
 	
 };
 
-USTRUCT(BlueprintType, DisplayName="Common AI Tracked Stimuli Source")
-struct COMMONAIBEHAVIORS_API FCAIBTrackedStimuliSource
+USTRUCT(BlueprintType, DisplayName="Common AI Tracked Stimulus Source")
+struct COMMONAIBEHAVIORS_API FCAIBTrackedStimulusSource
 {
 	GENERATED_BODY()
 	
-	FCAIBTrackedStimuliSource();
+	FCAIBTrackedStimulusSource();
 	
-	FCAIBTrackedStimuliSource(const FActorPerceptionUpdateInfo& UpdateInfo);
+	FCAIBTrackedStimulusSource(const FActorPerceptionUpdateInfo& UpdateInfo);
 
 	/** Id of to the stimulus source */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
@@ -142,12 +142,12 @@ struct COMMONAIBEHAVIORS_API FCAIBTrackedSensesContainer
 
 	void RemoveSense(FGameplayTag SenseTag);
 
-	const TMap<FGameplayTag, FCAIBTrackedStimuliSource>& GetMap() { return PerSenseSources; };
-	TMap<FGameplayTag, FCAIBTrackedStimuliSource>& GetMutableMap() { return PerSenseSources; };
+	const TMap<FGameplayTag, FCAIBTrackedStimulusSource>& GetMap() { return PerSenseSources; };
+	TMap<FGameplayTag, FCAIBTrackedStimulusSource>& GetMutableMap() { return PerSenseSources; };
 	
 protected:
 	TWeakObjectPtr<UCAIBAIPerceptionComponent> PerceptionComponent;
 	
 	/** Key: sense gameplay tag, see ICAIBSenseInterface */
-	TMap<FGameplayTag, FCAIBTrackedStimuliSource> PerSenseSources;
+	TMap<FGameplayTag, FCAIBTrackedStimulusSource> PerSenseSources;
 };

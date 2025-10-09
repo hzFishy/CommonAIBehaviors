@@ -17,13 +17,11 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleInstanceData
 	
 	UPROPERTY(EditAnywhere, Category=Context)
 	TObjectPtr<ACharacter> Character;
-
+	
 	TWeakObjectPtr<UAnimInstance> CharacterAnimInstance;
-	TWeakObjectPtr<UAnimMontage> CurrentSingleMontage;
 
-	FCAIBBehaviorId SequenceBehaviorId;
-
-	uint32 DebugId;
+	/** Shared for the various types of static idle behaviors */
+	FCAIBBehaviorId BehaviorId;
 };
 
 

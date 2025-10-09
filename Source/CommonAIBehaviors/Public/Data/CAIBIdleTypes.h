@@ -3,18 +3,143 @@
 #pragma once
 
 #include "CAIBTypes.h"
+#include "StructUtils/InstancedStruct.h"
 #include "CAIBIdleTypes.generated.h"
+class UPathFollowingComponent;
 
 	
 	/*----------------------------------------------------------------------------
 		Static Idle
 	----------------------------------------------------------------------------*/
 USTRUCT()
-struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorBaseData
+struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBaseRuntimeData : public FCAIBBehaviorRuntimeDataBase
 {
 	GENERATED_BODY()
 
+public:
+	FCAIBStaticIdleBaseRuntimeData();
+	
+	virtual void OnTargetActorSet() override;
+	
+	virtual void Pause() override;
+
+	virtual void Resume() override;
+	
+	virtual void Stop() override;
+
+	const FCAIBStaticIdleBehaviorBaseData* CachedBaseData;
+
+	template <std::derived_from<FCAIBStaticIdleBehaviorBaseData> T>
+	const T* GetCachedDataAs() const
+	{
+		return static_cast<const T*>(CachedBaseData);
+	}
+	
+protected:
+	TWeakObjectPtr<UAnimInstance> CharacterAnimInstance;
+	TWeakObjectPtr<AAIController> Controller;
+	TWeakObjectPtr<UPathFollowingComponent> PathFollowingComponent;
+	FDelegateHandle PathFinishDelegateHandle;
+	FVector StartLocation;
+	FRotator StartRotation;
+	bool bMovingToStart;
+	
+	/** Anim Montage the character is currently playing */
+	TWeakObjectPtr<UAnimMontage> CurrentMontage;
+
+	virtual void OnResumeFinished();
+	
+	void StopCurrentAnimation();
+};
+
+USTRUCT()
+struct COMMONAIBEHAVIORS_API FCAIBStaticIdleSingleRuntimeData : public FCAIBStaticIdleBaseRuntimeData
+{
+	GENERATED_BODY()
+
+public:
+	FCAIBStaticIdleSingleRuntimeData();
+	
+	virtual void Start() override;
+
+	virtual void Pause() override;
+
+#if CAIB_WITH_DEBUG
+	virtual FFUMessageBuilder GetDebugState() const override;
+#endif
+
+protected:
+	const FCAIBStaticIdleBehaviorSingleData* CachedSingleData;
+
+	virtual void OnResumeFinished() override;
+	
+	void PlaySingleAnim();
+};
+
+USTRUCT()
+struct COMMONAIBEHAVIORS_API FCAIBStaticIdleSequenceRuntimeData : public FCAIBStaticIdleBaseRuntimeData
+{
+	GENERATED_BODY()
+
+public:
+	FCAIBStaticIdleSequenceRuntimeData();
+	
+	virtual void Start() override;
+
+	virtual bool CanTick() override;
+	
+	virtual void Tick(float DeltaTime) override;
+
+#if CAIB_WITH_DEBUG
+	virtual FFUMessageBuilder GetDebugState() const override;
+#endif
+	
+protected:
+	const FCAIBStaticIdleBehaviorSequenceData* CachedSequenceData;
+	
+	/** Index used in the latest sequence selection */
+	int32 CurrentIndex;
+
+	/** How much we wait until we trigger a new selection */
+	float TargetRelativeTime;
+	
+	/** Elapsed game time since we selected a new sequence entry */
+	float ElapsedTime;
+
+	virtual void OnResumeFinished() override;
+	
+	int32 GetNextSequenceEntryIndex();
+
+	void GoNextSequenceEntry();
+};
+
+
+USTRUCT()
+struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorBaseData
+{
+	GENERATED_BODY()
 	FCAIBStaticIdleBehaviorBaseData();
+	virtual ~FCAIBStaticIdleBehaviorBaseData();
+
+	virtual TSharedPtr<FCAIBStaticIdleBaseRuntimeData> MakeSharedRuntime() const;
+
+	
+	/**
+	 * On first play we store the AI location as the "StartLocation".
+	 * The idle state might be aborted because of external events (e.i: detecting and chasing the player)
+	 * This means that when the AI will go back to the idle state it might be at an undesired location.
+	 * If this is true, we will only replay the montage after we successfully reach the start location
+	 */
+	UPROPERTY(EditAnywhere)
+	bool bOnResumeGoBackToStartLocation;
+	
+	UPROPERTY(EditAnywhere, meta=(EditCondition="bOnResumeGoBackToStartLocation"))
+	bool bOnResumeGoBackToStartRotation;
+	
+	UPROPERTY(EditAnywhere, meta=(EditCondition="bOnResumeGoBackToStartLocation"))
+	float GoBackToStartAcceptanceRadius;
+
+	// TODO: random rotation on start between 2 yaw angles
 };
 
 
@@ -28,6 +153,8 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorSingleData : public FCAIBSta
 
 	FCAIBStaticIdleBehaviorSingleData();
 
+	virtual TSharedPtr<FCAIBStaticIdleBaseRuntimeData> MakeSharedRuntime() const override;
+	
 	/**
 	 * Animation the AI will play.
 	 * Should be seamless and set to autoloop since we are only going to play this once
@@ -83,11 +210,21 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorSequenceData : public FCAIBS
 
 	FCAIBStaticIdleBehaviorSequenceData();
 
+	virtual TSharedPtr<FCAIBStaticIdleBaseRuntimeData> MakeSharedRuntime() const override;
+
+	
 	UPROPERTY(EditAnywhere)
 	ECAIBStaticIdleBehaviorSequenceType SelectionType;
 	
 	UPROPERTY(EditAnywhere)
 	TArray<FCAIBStaticIdleBehaviorSequenceEntryData> SequenceEntries;
+
+	/** When we resume this behavior do we restart at 0? */
+	UPROPERTY(EditAnywhere)
+	bool bOnResumeGoBackToInitalIndex;
+
+	UPROPERTY(EditAnywhere)
+	bool bOnResumeResetAnimationProgress;
 };
 
 
@@ -100,46 +237,4 @@ struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorStaticIdleFragment : public FCAIBAIB
 
 	UPROPERTY(EditAnywhere, meta=(ExcludeBaseStruct))
 	TInstancedStruct<FCAIBStaticIdleBehaviorBaseData> Data;
-};
-
-USTRUCT()
-struct COMMONAIBEHAVIORS_API FCAIBStaticIdleRuntimeData : public FCAIBBehaviorRuntimeDataBase
-{
-	GENERATED_BODY()
-
-public:
-	FCAIBStaticIdleRuntimeData();
-	
-	const FCAIBStaticIdleBehaviorSequenceData* SequenceData;
-
-	virtual void OnTargetActorSet() override;
-	
-	virtual void Start() override;
-
-	virtual void Tick(float DeltaTime) override;
-
-	virtual void Stop() override;
-
-#if CAIB_WITH_DEBUG
-	virtual FFUMessageBuilder GetDebugState() const override;
-#endif
-	
-protected:
-	TWeakObjectPtr<UAnimInstance> CharacterAnimInstance;
-	
-	/** Index used in the latest sequence selection */
-	int32 CurrentIndex;
-
-	/** Anim Montage the character is currently playing */
-	TWeakObjectPtr<UAnimMontage> CurrentMontage;
-	
-	/** How much we wait until we trigger a new selection */
-	float TargetRelativeTime;
-	
-	/** Elapsed game time since we selected a new sequence entry */
-	float ElapsedTime;
-	
-	int32 GetNextSequenceEntryIndex();
-
-	void GoNextSequenceEntry();
 };

@@ -5,6 +5,7 @@
 #include "Core/CAIBCore.h"
 #include "Utility/FUUtilities.h"
 #include "CAIBTypes.generated.h"
+class UStateTree;
 class AAIController;
 class ACAIBPatrolSplineActor;
 class UCAIBAIBehaviorComponent;
@@ -15,7 +16,7 @@ using FU::Utils::FFUMessageBuilder;
 		Core
 	----------------------------------------------------------------------------*/
 USTRUCT(BlueprintType, DisplayName="Common AI Behavior Id")
-struct FCAIBBehaviorId
+struct COMMONAIBEHAVIORS_API FCAIBBehaviorId
 {
 	GENERATED_BODY()
 
@@ -50,6 +51,27 @@ protected:
 };
 
 
+struct COMMONAIBEHAVIORS_API FCAIBStateTreeCacheId
+{
+	FCAIBStateTreeCacheId();
+	FCAIBStateTreeCacheId(const UStateTree* InStateTree, const UScriptStruct* InTaskType);
+
+	bool operator==(const FCAIBStateTreeCacheId& Other) const
+	{
+		return StateTree == Other.StateTree && TaskType == Other.TaskType;
+	}
+	
+	friend uint32 GetTypeHash(const FCAIBStateTreeCacheId& Self)
+	{
+		return HashCombineFast(Self.StateTree.GetWeakPtrTypeHash(), Self.TaskType.GetWeakPtrTypeHash());
+	}
+	
+protected:
+	TWeakObjectPtr<const UStateTree> StateTree;
+	TWeakObjectPtr<const UScriptStruct> TaskType;
+};
+
+
 USTRUCT()
 struct COMMONAIBEHAVIORS_API FCAIBBehaviorRuntimeDataBase
 {
@@ -62,10 +84,16 @@ public:
 	/** Called on first tick when this insatnce is added to the active array */
 	virtual void Start();
 
+	virtual bool CanTick();
+	
 	/** Called on next tick after Start was called */
 	virtual void Tick(float DeltaTime);
 
 	virtual void Stop();
+	
+	virtual void Pause();
+	
+	virtual void Resume();
 
 #if CAIB_WITH_DEBUG
 	/**
@@ -82,6 +110,8 @@ public:
 #endif
 	
 	bool HasStarted() const { return bStarted; };
+
+	bool IsActive() const { return bActive; };
 
 	void SetTargetActor(AActor* InActor);
 
@@ -107,6 +137,8 @@ protected:
 	bool bStarted;
 	/** The actor that is "executing" the behavior, this should be the AI Pawn or Character */
 	TWeakObjectPtr<AActor> TargetActor;
+	/** if active we will call tick */
+	bool bActive;
 };
 
 

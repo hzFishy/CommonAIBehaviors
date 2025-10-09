@@ -125,9 +125,11 @@ FCAIBTrackedSensesContainer::FCAIBTrackedSensesContainer(UCAIBAIPerceptionCompon
 
 void FCAIBTrackedSensesContainer::AddOrUpdateSense(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
+	// TODO: cache to avoid doing this each tick
 	auto* Config = PerceptionComponent->GetSenseConfig(UpdateInfo.Stimulus.Type);
 	auto* Sense = Config->GetSenseImplementation()->GetDefaultObject<UAISense>();
-	FGameplayTag FoundSenseTag = FGameplayTag();
+	
+	FGameplayTag FoundSenseTag;
 	if (auto* SenseInterface = Cast<ICAIBSenseInterface>(Sense))
 	{
 		FoundSenseTag = SenseInterface->GetSenseTag();
@@ -141,14 +143,20 @@ void FCAIBTrackedSensesContainer::AddOrUpdateSense(const FActorPerceptionUpdateI
 	{
 		auto PreviousStimulus = Entry->LatestStimulus;
 		Entry->LatestStimulus = FCAIBAIStimulus(PreviousStimulus, UpdateInfo.Stimulus);
+
+		PerceptionComponent->OnUpdatedSensePerceivedForTargetDelegate.Broadcast(
+			PerceptionComponent.Get(),
+			FoundSenseTag,
+			*Entry
+		);
 	}
 	else
 	{
 		// init max age here
-		auto NewStimuli = FCAIBTrackedStimuliSource(UpdateInfo);
-		NewStimuli.LatestStimulus.MaxAge = Config->GetMaxAge();
+		auto NewStimulus = FCAIBTrackedStimulusSource(UpdateInfo);
+		NewStimulus.LatestStimulus.MaxAge = Config->GetMaxAge();
 		
-		auto& Value = PerSenseSources.Add(FoundSenseTag, NewStimuli);
+		auto& Value = PerSenseSources.Add(FoundSenseTag, NewStimulus);
 		PerceptionComponent->OnNewSensePerceivedForTargetDelegate.Broadcast(
 			PerceptionComponent.Get(),
 			FoundSenseTag,
@@ -160,14 +168,21 @@ void FCAIBTrackedSensesContainer::AddOrUpdateSense(const FActorPerceptionUpdateI
 void FCAIBTrackedSensesContainer::RemoveSense(FGameplayTag SenseTag)
 {
 	PerSenseSources.Remove(SenseTag);
+
+	PerceptionComponent->OnForgottenSensePerceivedForTargetDelegate.Broadcast(
+		PerceptionComponent.Get(),
+		SenseTag
+	);
+
+	// TODO: remove stimuli in the perception system
 }
 
 
-FCAIBTrackedStimuliSource::FCAIBTrackedStimuliSource():
+FCAIBTrackedStimulusSource::FCAIBTrackedStimulusSource():
 	TargetId(-1)
 {}
 
-FCAIBTrackedStimuliSource::FCAIBTrackedStimuliSource(const FActorPerceptionUpdateInfo& UpdateInfo):
+FCAIBTrackedStimulusSource::FCAIBTrackedStimulusSource(const FActorPerceptionUpdateInfo& UpdateInfo):
 	TargetId(UpdateInfo.TargetId),
 	Target(UpdateInfo.Target),
 	LatestStimulus(UpdateInfo.Stimulus)

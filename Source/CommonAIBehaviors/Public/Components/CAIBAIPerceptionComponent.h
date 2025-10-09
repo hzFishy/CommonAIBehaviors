@@ -11,7 +11,18 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FCAIBOnNewSensePerceivedForTargetSignature,
 	UCAIBAIPerceptionComponent*, PerceptionComponent,
 	FGameplayTag, SenseTag,
-	const FCAIBTrackedStimuliSource&, TrackedSource
+	const FCAIBTrackedStimulusSource&, TrackedSource
+);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FCAIBOnUpdatedSensePerceivedForTargetSignature,
+	UCAIBAIPerceptionComponent*, PerceptionComponent,
+	FGameplayTag, SenseTag,
+	const FCAIBTrackedStimulusSource&, TrackedSource
+);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCAIBOnForgottenSensePerceivedForTargetSignature,
+	UCAIBAIPerceptionComponent*, PerceptionComponent,
+	FGameplayTag, SenseTag
 );
 
 
@@ -38,7 +49,19 @@ public:
 	UPROPERTY(BlueprintAssignable, DisplayName="On New Sense Perceived For Target")
 	FCAIBOnNewSensePerceivedForTargetSignature OnNewSensePerceivedForTargetDelegate;
 	
+	UPROPERTY(BlueprintAssignable, DisplayName="On Updated Sense Perceived For Target")
+	FCAIBOnUpdatedSensePerceivedForTargetSignature OnUpdatedSensePerceivedForTargetDelegate;
+	
+	UPROPERTY(BlueprintAssignable, DisplayName="On Forgotten Sense Perceived For Target")
+	FCAIBOnForgottenSensePerceivedForTargetSignature OnForgottenSensePerceivedForTargetDelegate;
+	
 protected:
+	/** How much we wait between ticks, if not set we tick on each frame */
+	UPROPERTY(EditAnywhere, Category="Common AI Behavior")
+	TOptional<float> TickInterval;
+
+	float ElapsedTimeSinceLastTick;
+	
 	/** Key: SourceId, value holds a list of all various sense that "found" the same source */
 	TMap<int32, FCAIBTrackedSensesContainer> TrackedSources;
 
@@ -70,6 +93,8 @@ protected:
 
 	void TickTrackedSources(float DeltaTime);
 
+	virtual void RemoveStimulus(const FCAIBStimuliExpired& ExpiredSource);
+	
 	
 	/*----------------------------------------------------------------------------
 		Callback

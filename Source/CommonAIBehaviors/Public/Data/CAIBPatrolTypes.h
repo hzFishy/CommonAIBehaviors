@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include "AITypes.h"
 #include "CAIBTypes.h"
+#include "StructUtils/InstancedStruct.h"
 #include "CAIBPatrolTypes.generated.h"
 
 
