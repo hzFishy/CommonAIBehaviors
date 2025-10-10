@@ -210,7 +210,7 @@ void FCAIBStaticIdleSequenceRuntimeData::OnResumeFinished()
 {
 	Super::OnResumeFinished();
 
-	if (CachedSequenceData->bOnResumeGoBackToInitalIndex)
+	if (CachedSequenceData->bOnResumeGoBackToInitialIndex)
 	{
 		CurrentIndex = -1;
 	}
@@ -267,7 +267,11 @@ void FCAIBStaticIdleSequenceRuntimeData::GoNextSequenceEntry()
 {
 	// select new index and get linked entry
 	CurrentIndex = GetNextSequenceEntryIndex();
+	ExecuteCurrentSequenceEntry();
+}
 
+void FCAIBStaticIdleSequenceRuntimeData::ExecuteCurrentSequenceEntry()
+{
 	const auto& SequenceEntryData = CachedSequenceData->SequenceEntries[CurrentIndex];
 
 	// TODO (perf): async load montage
@@ -316,7 +320,7 @@ FCAIBStaticIdleBehaviorSequenceEntryData::FCAIBStaticIdleBehaviorSequenceEntryDa
 
 FCAIBStaticIdleBehaviorSequenceData::FCAIBStaticIdleBehaviorSequenceData():
 	SelectionType(ECAIBStaticIdleBehaviorSequenceType::InOrder),
-	bOnResumeGoBackToInitalIndex(false),
+	bOnResumeGoBackToInitialIndex(false),
 	bOnResumeResetAnimationProgress(true)
 {}
 

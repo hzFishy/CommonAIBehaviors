@@ -61,7 +61,7 @@ EStateTreeRunStatus FCAIBTask_StaticIdle::EnterState(FStateTreeExecutionContext&
 	// check if we ran this previously
 	// we need to get the behavior id, previously linked to that object
 
-	auto* CachedId = BehaviorSubsystem->GetCachedBehavioridSafe(FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_StaticIdle::StaticStruct()));
+	auto* CachedId = BehaviorSubsystem->GetCachedBehavioridSafe(FCAIBStateTreeCacheId(Context));
 	if (CachedId)
 	{
 		InstanceData.BehaviorId = *CachedId;
@@ -85,7 +85,7 @@ EStateTreeRunStatus FCAIBTask_StaticIdle::EnterState(FStateTreeExecutionContext&
 		InstanceData.BehaviorId = BehaviorSubsystem->AddActiveBehavior(RuntimeIdleData);
 		
 		BehaviorSubsystem->CacheNewBehaviorid(
-			FCAIBStateTreeCacheId(Context.GetStateTree(), FCAIBTask_StaticIdle::StaticStruct()),
+			FCAIBStateTreeCacheId(Context),
 			InstanceData.BehaviorId
 		);
 	}

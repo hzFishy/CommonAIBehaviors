@@ -2,6 +2,8 @@
 
 
 #include "Data/CAIBTypes.h"
+
+#include "StateTreeExecutionContext.h"
 #include "GameFramework/Character.h"
 
 	
@@ -27,11 +29,10 @@ FCAIBBehaviorId::FCAIBBehaviorId(uint32 InId):
 
 FCAIBStateTreeCacheId::FCAIBStateTreeCacheId() {}
 
-FCAIBStateTreeCacheId::FCAIBStateTreeCacheId(const UStateTree* InStateTree, const UScriptStruct* InTaskType):
-	StateTree(InStateTree),
-	TaskType(InTaskType)
+FCAIBStateTreeCacheId::FCAIBStateTreeCacheId(FStateTreeExecutionContext& Context):
+	StateTree(Context.GetStateTree()),
+	TaskHandle(Context.GetCurrentlyProcessedState())
 {}
-
 
 FCAIBBehaviorRuntimeDataBase::FCAIBBehaviorRuntimeDataBase():
 	bStarted(false),

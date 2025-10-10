@@ -36,6 +36,7 @@ void FCAIBPatrolBaseRuntimeData::OnTargetActorSet()
 	Super::OnTargetActorSet();
 
 	Controller = GetTargetCharacter()->GetController<AAIController>();
+	PathFollowingComponent = Controller->GetComponentByClass<UPathFollowingComponent>();
 }
 
 void FCAIBPatrolBaseRuntimeData::Start()
@@ -55,23 +56,13 @@ void FCAIBPatrolBaseRuntimeData::Tick(float DeltaTime)
 	}
 }
 
-void FCAIBPatrolBaseRuntimeData::Resume()
-{
-	Super::Resume();
-
-	// TODO: move to latest target point
-	// TODO: we need to know if we go back to latest index or if we reset the index to 0
-	// TODO: option to reset or not progress time at the point (should be true if we reset to 0)
-}
-
 void FCAIBPatrolBaseRuntimeData::Stop()
 {
 	Super::Stop();
 
 	if (CurrentMoveId.IsValid())
 	{
-		auto* PathFollowingComponent = GetTargetComponent<UPathFollowingComponent>();
-		if (IsValid(PathFollowingComponent) && PathFollowingComponent->GetStatus() != EPathFollowingStatus::Idle)
+		if (PathFollowingComponent.IsValid() && PathFollowingComponent->GetStatus() != EPathFollowingStatus::Idle)
 		{
 			PathFollowingComponent->AbortMove(
 				*GetTargetActor(),
@@ -115,6 +106,11 @@ void FCAIBPatrolBaseRuntimeData::MoveToNextPoint()
 {
 	CurrentTargetLocation = GetNextMoveToLocation();
 
+	MoveToPoint();
+}
+
+void FCAIBPatrolBaseRuntimeData::MoveToPoint()
+{
 	OnPreStartMove();
 
 	FAIMoveRequest MoveReq(CurrentTargetLocation);
@@ -131,7 +127,7 @@ void FCAIBPatrolBaseRuntimeData::MoveToNextPoint()
 	{
 		CurrentMoveId = Result.MoveId;
 		bTargetPointReached = false;
-		auto* PathFollowingComponent = Controller->GetComponentByClass<UPathFollowingComponent>();
+		
 		if (PathFinishDelegateHandle.IsValid())
 		{
 			PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
@@ -227,6 +223,31 @@ void FCAIBPatrolSplineRuntimeData::Pause()
 	StopPlayingAnim();
 }
 
+void FCAIBPatrolSplineRuntimeData::Resume()
+{
+	Super::Resume();
+
+	if (CachedPatrolFragment->bOnResumeResetToSpecificIndex)
+	{
+		PreviousTargetPointIndex = CurrentTargetPointIndex;
+		CurrentTargetPointIndex = CachedPatrolFragment->ResumeIndex;
+	
+		CurrentTargetLocation = SplineActor->GetPatrolSplineComponent()->GetLocationAtSplinePoint(
+			CurrentTargetPointIndex,
+			ESplineCoordinateSpace::World
+		);
+	}
+
+	// option to reset or not progress time at the point (should be true if we reset to 0)
+	if (CachedPatrolFragment->bOnResumeResetProgressTime)
+	{
+		WaitElapsedTime = 0;
+	}
+
+	// now we move to the target location
+	MoveToPoint();
+}
+
 void FCAIBPatrolSplineRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -237,6 +258,8 @@ void FCAIBPatrolSplineRuntimeData::Tick(float DeltaTime)
 #if CAIB_WITH_DEBUG
 FFUMessageBuilder FCAIBPatrolSplineRuntimeData::GetDebugState() const
 {
+	if (!IsActive()) { return FFUMessageBuilder(); }
+	
 	auto& CurrentPointSplineData = SplinePointsData[CurrentTargetPointIndex];
 
 	auto MessageBuilder = Super::GetDebugState();
@@ -252,10 +275,10 @@ FFUMessageBuilder FCAIBPatrolSplineRuntimeData::GetDebugState() const
 				*FU::Utils::PrintCompactFloat(CurrentPointSplineData.MaxWalkSpeed.GetValue())));
 	}
 	
-	if (SelectedWaitAnim != nullptr)
+	if (SelectedWaitAnim != nullptr && IsValid(LoadedWaitAnim))
 	{
 		MessageBuilder
-			.NewLine("CurrentMontage: " + SelectedWaitAnim->AnimMontage->GetName());
+			.NewLine("CurrentMontage: " + LoadedWaitAnim->GetName());
 	}
 	
 	if (!bMoving)
@@ -308,7 +331,7 @@ FVector FCAIBPatrolSplineRuntimeData::GetNextMoveToLocation()
 	{
 		CurrentTargetPointIndex = 0;
 	}
-
+	
 	return SplineActor->GetPatrolSplineComponent()->GetLocationAtSplinePoint(
 		CurrentTargetPointIndex,
 		ESplineCoordinateSpace::World
@@ -341,6 +364,11 @@ void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
 {
 	Super::OnTargetPointReached();
 
+	if (PathFinishDelegateHandle.IsValid())
+	{
+		PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
+	}
+	
 	auto& CurrentPointSplineData = SplinePointsData[CurrentTargetPointIndex];
 
 	// remove potential temporary vars
@@ -365,10 +393,10 @@ void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
 			SelectedWaitAnim = &CurrentPointSplineData.WaitAnimationsData[FMath::RandRange(0,  MaxIndex)];
 
 			// TODO (perf): async load
-			auto* LoadedMontage = SelectedWaitAnim->AnimMontage.LoadSynchronous();
+			LoadedWaitAnim = SelectedWaitAnim->AnimMontage.LoadSynchronous();
 			
 			const float MontageDuration = TargetCharacterAnimInstance->Montage_Play(
-				LoadedMontage,
+				LoadedWaitAnim.Get(),
 				SelectedWaitAnim->PlayRate,
 				EMontagePlayReturnType::Duration
 			);
@@ -384,14 +412,15 @@ void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
 
 void FCAIBPatrolSplineRuntimeData::StopPlayingAnim()
 {
-	if (TargetCharacterAnimInstance.IsValid() && SelectedWaitAnim != nullptr)
+	if (TargetCharacterAnimInstance.IsValid() && SelectedWaitAnim != nullptr && IsValid(LoadedWaitAnim.Get()))
 	{
 		TargetCharacterAnimInstance->Montage_Stop(
 			0.2,
-			SelectedWaitAnim->AnimMontage.Get()
+			LoadedWaitAnim.Get()
 		);
 	}
 	SelectedWaitAnim = nullptr;
+	LoadedWaitAnim = nullptr;
 }
 
 
@@ -455,5 +484,8 @@ TSharedPtr<FCAIBPatrolBaseRuntimeData> FCAIBAIBehaviorPatrolSplineData::MakeShar
 
 
 FCAIBAIBehaviorPatrolFragment::FCAIBAIBehaviorPatrolFragment():
-	AcceptanceRadius(50)
+	AcceptanceRadius(50),
+	bOnResumeResetToSpecificIndex(true),
+	ResumeIndex(0),
+	bOnResumeResetProgressTime(true)
 {}

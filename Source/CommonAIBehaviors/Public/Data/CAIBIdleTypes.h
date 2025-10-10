@@ -111,6 +111,8 @@ protected:
 	int32 GetNextSequenceEntryIndex();
 
 	void GoNextSequenceEntry();
+	
+	void ExecuteCurrentSequenceEntry();
 };
 
 
@@ -118,6 +120,7 @@ USTRUCT()
 struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorBaseData
 {
 	GENERATED_BODY()
+	
 	FCAIBStaticIdleBehaviorBaseData();
 	virtual ~FCAIBStaticIdleBehaviorBaseData();
 
@@ -221,7 +224,7 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorSequenceData : public FCAIBS
 
 	/** When we resume this behavior do we restart at 0? */
 	UPROPERTY(EditAnywhere)
-	bool bOnResumeGoBackToInitalIndex;
+	bool bOnResumeGoBackToInitialIndex;
 
 	UPROPERTY(EditAnywhere)
 	bool bOnResumeResetAnimationProgress;

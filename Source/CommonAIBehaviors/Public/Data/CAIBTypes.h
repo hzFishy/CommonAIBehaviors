@@ -2,9 +2,12 @@
 
 #pragma once
 
+#include "StateTreeTypes.h"
+#include "StateTreeExecutionContext.h"
 #include "Core/CAIBCore.h"
 #include "Utility/FUUtilities.h"
 #include "CAIBTypes.generated.h"
+struct FStateTreeReadOnlyExecutionContext;
 class UStateTree;
 class AAIController;
 class ACAIBPatrolSplineActor;
@@ -54,21 +57,21 @@ protected:
 struct COMMONAIBEHAVIORS_API FCAIBStateTreeCacheId
 {
 	FCAIBStateTreeCacheId();
-	FCAIBStateTreeCacheId(const UStateTree* InStateTree, const UScriptStruct* InTaskType);
+	FCAIBStateTreeCacheId(FStateTreeExecutionContext& Context);
 
 	bool operator==(const FCAIBStateTreeCacheId& Other) const
 	{
-		return StateTree == Other.StateTree && TaskType == Other.TaskType;
+		return StateTree == Other.StateTree && TaskHandle == Other.TaskHandle;
 	}
 	
 	friend uint32 GetTypeHash(const FCAIBStateTreeCacheId& Self)
 	{
-		return HashCombineFast(Self.StateTree.GetWeakPtrTypeHash(), Self.TaskType.GetWeakPtrTypeHash());
+		return HashCombineFast(Self.StateTree.GetWeakPtrTypeHash(), GetTypeHash(Self.TaskHandle));
 	}
 	
 protected:
 	TWeakObjectPtr<const UStateTree> StateTree;
-	TWeakObjectPtr<const UScriptStruct> TaskType;
+	FStateTreeStateHandle TaskHandle;
 };
 
 

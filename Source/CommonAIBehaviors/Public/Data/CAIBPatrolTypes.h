@@ -8,6 +8,7 @@
 #include "CAIBPatrolTypes.generated.h"
 
 
+class UPathFollowingComponent;
 	/*----------------------------------------------------------------------------
 		Patrolling
 	----------------------------------------------------------------------------*/
@@ -76,8 +77,6 @@ public:
 	virtual void Start() override;
 	
 	virtual void Tick(float DeltaTime) override;
-
-	virtual void Resume() override;
 	
 	virtual void Stop() override;
 
@@ -89,6 +88,7 @@ public:
 	
 protected:
 	TWeakObjectPtr<AAIController> Controller;
+	TWeakObjectPtr<UPathFollowingComponent> PathFollowingComponent;
 
 	FDelegateHandle PathFinishDelegateHandle;
 	bool bTargetPointReached;
@@ -97,6 +97,8 @@ protected:
 	virtual bool CanGoNextPoint() const;
 	
 	void MoveToNextPoint();
+		
+	void MoveToPoint();
 
 	virtual FVector GetNextMoveToLocation();
 
@@ -127,6 +129,8 @@ public:
 	virtual void Start() override;
 
 	virtual void Pause() override;
+
+	virtual void Resume() override;
 	
 	virtual void Tick(float DeltaTime) override;
 
@@ -145,13 +149,15 @@ protected:
 	TOptional<float> PreviousMaxWalkSpeed;
 	int32 CurrentTargetPointIndex;
 	const FCAIBPatrolSplinePointDataWaitAnimation* SelectedWaitAnim;
+	UPROPERTY()
+	TObjectPtr<UAnimMontage> LoadedWaitAnim;
 	
 	int32 PreviousTargetPointIndex;
 
 	virtual bool CanGoNextPoint() const override;
 	
 	virtual FVector GetNextMoveToLocation() override;
-
+	
 	virtual void OnPreStartMove() override;
 	
 	virtual void OnStartedMove() override;
@@ -227,4 +233,14 @@ struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorPatrolFragment : public FCAIBAIBehav
 	
 	UPROPERTY(EditAnywhere, meta=(ExcludeBaseStruct))
 	TInstancedStruct<FCAIBAIBehaviorPatrolBaseData> Data;
+
+	UPROPERTY(EditAnywhere)
+	bool bOnResumeResetToSpecificIndex;
+	
+	UPROPERTY(EditAnywhere, meta=(EditCondition="bOnResumeResetToSpecificIndex"))
+	int32 ResumeIndex;
+	
+	
+	UPROPERTY(EditAnywhere)
+	bool bOnResumeResetProgressTime;
 };
