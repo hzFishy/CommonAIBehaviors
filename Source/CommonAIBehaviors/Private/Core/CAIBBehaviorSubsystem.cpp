@@ -2,18 +2,23 @@
 
 
 #include "Core/CAIBBehaviorSubsystem.h"
+
+#include "AIController.h"
+#include "EngineUtils.h"
 #include "Asserts/FUAsserts.h"
 #include "Console/FUConsole.h"
 #include "Core/CAIBCore.h"
 #include "Draw/FUDraw.h"
+#include "Utility/FUOrientedBox.h"
 
-	
-	/*----------------------------------------------------------------------------
+
+/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
 UCAIBBehaviorSubsystem::UCAIBBehaviorSubsystem():
 	LatestBehaviorId(0),
-	LatestPermanentDebugId(0)
+	LatestPermanentDebugId(0),
+	DebugCurrentTargetIndex(0)
 {}
 
 bool UCAIBBehaviorSubsystem::DoesSupportWorldType(const EWorldType::Type WorldType) const
@@ -24,11 +29,22 @@ bool UCAIBBehaviorSubsystem::DoesSupportWorldType(const EWorldType::Type WorldTy
 void UCAIBBehaviorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	OnActorAddedToWorldHandle = GetWorld()->AddOnActorSpawnedHandler(
+		FOnActorSpawned::FDelegate::CreateUObject(this, &ThisClass::OnActorAddedToWorld)
+	);
+	
+	OnActorRemovedToWorldHandle = GetWorld()->AddOnActorDestroyedHandler(
+		FOnActorSpawned::FDelegate::CreateUObject(this, &ThisClass::OnActorRemovedToWorld)
+	);
 }
 
 void UCAIBBehaviorSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
+
+	GetWorld()->RemoveOnActorSpawnedHandler(OnActorAddedToWorldHandle);
+	GetWorld()->RemoveOnActorDestroyedHandler(OnActorRemovedToWorldHandle);
 }
 
 void UCAIBBehaviorSubsystem::Tick(float DeltaTime)
@@ -36,7 +52,21 @@ void UCAIBBehaviorSubsystem::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	TickBehaviors(DeltaTime);
+	
 #if CAIB_WITH_DEBUG
+	if (CAIB::Debug::DebugStatesModeValue == 1)
+	{
+		if (auto* CurrentDebugTarget = GetValid(GetTargetDebugAIPawn()))
+		{
+			FU::Utils::FFUOrientedBox(CurrentDebugTarget, false).DrawDebugFrame(
+				GetWorld(),
+				FColor::Yellow,
+				2,
+				0
+			);
+		}
+	}
+	
 	TickDebugMessages(DeltaTime);
 #endif
 }
@@ -45,9 +75,9 @@ void UCAIBBehaviorSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 
-	if (auto* PlayerController = InWorld.GetFirstPlayerController())
+	for (auto It = TActorIterator<APawn>(GetWorld()); It; ++It)
 	{
-		PlayerActor = PlayerController->GetPawn().Get();
+		OnActorAddedToWorld(*It);
 	}
 }
 
@@ -144,47 +174,164 @@ void UCAIBBehaviorSubsystem::TickBehaviors(float DeltaTime)
 		}
 
 #if CAIB_WITH_DEBUG
-		if (CAIB::Debug::DebugStatesModeForAllValue)
+		if (CAIB::Debug::DebugStatesModeValue > 0)
 		{
-			const float Distance = FVector::Distance(PlayerActor.Get()->GetActorLocation(), RuntimeData->GetTargetActor()->GetActorLocation());
-
-			if (Distance < CAIB::Debug::DebugStatesMaxDistanceForAllValue)
+			// check if target mode or all
+			bool bCanDraw = CAIB::Debug::DebugStatesModeValue == 2;
+				
+			if (!bCanDraw && CAIB::Debug::DebugStatesModeValue == 1)
 			{
-				const auto& MessageBuilder = RuntimeData->GetDebugState();
-				FU::Draw::DrawDebugStringFrame(GWorld->GetWorld(),
-					RuntimeData->GetTargetActor()->GetActorLocation(),
-					MessageBuilder.GetMessage(),
-					FColor::Yellow,
-					2
-				);
+				if (GetValid(RuntimeData->GetTargetActor()) == GetValid(GetTargetDebugAIPawn()))
+				{
+					bCanDraw = true;
+				}
 			}
-			RuntimeData->DrawDebugState();
+			
+			if (bCanDraw)
+			{
+				const float Distance = FVector::Distance(DebugPlayerActor.Get()->GetActorLocation(), RuntimeData->GetTargetActor()->GetActorLocation());
+
+				// check distance
+				if (CAIB::Debug::DebugStatesMaxDistanceValue <= 0 || Distance < CAIB::Debug::DebugStatesMaxDistanceValue)
+				{
+					const auto& MessageBuilder = RuntimeData->GetDebugState();
+					FU::Draw::DrawDebugStringFrame(GWorld->GetWorld(),
+						RuntimeData->GetTargetActor()->GetActorLocation(),
+						MessageBuilder.GetMessage(),
+						FColor::Yellow,
+						2
+					);
+					
+					RuntimeData->DrawDebugState();
+				}
+			}
 		}
 #endif
 	}
 }
 
+	
+	/*----------------------------------------------------------------------------
+		Debug
+	----------------------------------------------------------------------------*/
 #if CAIB_WITH_DEBUG
+void UCAIBBehaviorSubsystem::GoToNextDebugAIPawn()
+{
+	DebugCurrentTargetIndex++;
+	
+	if (DebugCurrentTargetIndex >= DebugTargetPawns.Num())
+	{
+		// reset
+		DebugCurrentTargetIndex = 0;
+	}
+}
+
+void UCAIBBehaviorSubsystem::GoToPreviousDebugAIPawn()
+{
+	DebugCurrentTargetIndex--;
+	
+	if (DebugCurrentTargetIndex < 0)
+	{
+		// reset
+		DebugCurrentTargetIndex = DebugTargetPawns.Num()-1;
+	}
+}
+
 void UCAIBBehaviorSubsystem::TickDebugMessages(float DeltaTime)
 {
-	if (CAIB::Debug::DebugStatesModeForAllValue)
+	if (CAIB::Debug::DebugStatesModeValue > 0)
 	{
 		for (auto& Pair : PermanentDebugMessages)
 		{
 			auto& MessageData = Pair.Value;
 
-			const float Distance = FVector::Distance(PlayerActor.Get()->GetActorLocation(), MessageData.TargetActor->GetActorLocation());
-
-			if (Distance < CAIB::Debug::DebugStatesMaxDistanceForAllValue)
+			// check if target mode or all
+			bool bCanDraw = CAIB::Debug::DebugStatesModeValue == 2;
+				
+			if (!bCanDraw && CAIB::Debug::DebugStatesModeValue == 1)
 			{
-				FU::Draw::DrawDebugStringFrame(GWorld->GetWorld(),
-					MessageData.TargetActor->GetActorLocation(),
-					MessageData.MessageBuilder.GetMessage(),
-					FColor::Yellow,
-					2
-				);
-			}			
+				if (GetValid(MessageData.TargetActor.Get()) == GetValid(GetTargetDebugAIPawn()))
+				{
+					bCanDraw = true;
+				}
+			}
+			
+			if (bCanDraw)
+			{
+				const float Distance = FVector::Distance(DebugPlayerActor.Get()->GetActorLocation(), MessageData.TargetActor->GetActorLocation());
+				
+				if (CAIB::Debug::DebugStatesMaxDistanceValue <= 0 || Distance < CAIB::Debug::DebugStatesMaxDistanceValue)
+				{
+					FU::Draw::DrawDebugStringFrame(GWorld->GetWorld(),
+						MessageData.TargetActor->GetActorLocation(),
+						MessageData.MessageBuilder.GetMessage(),
+						FColor::Yellow,
+						2
+					);
+				}
+			}	
 		}
 	}
+}
+
+void UCAIBBehaviorSubsystem::OnActorAddedToWorld(AActor* Actor)
+{
+	if (auto* Pawn = Cast<APawn>(Actor))
+	{
+		if (IsValid(Pawn->GetController()) && Pawn->GetController<AAIController>())
+		{
+			OnDebugAIPawnAddedToWorld(Pawn);
+		}
+		else if (!DebugPlayerActor.IsValid() && IsValid(Pawn->GetController()) && Pawn->GetController<APlayerController>())
+		{
+			DebugPlayerActor = Pawn;
+		}
+	}
+}
+
+void UCAIBBehaviorSubsystem::OnDebugAIPawnAddedToWorld(APawn* InPawn)
+{
+	// this wont impact DebugCurrentTargetIndex
+	DebugTargetPawns.Emplace(InPawn);
+}
+
+void UCAIBBehaviorSubsystem::OnActorRemovedToWorld(AActor* Actor)
+{
+	if (auto* Pawn = Cast<APawn>(Actor))
+	{
+		if (IsValid(Pawn->GetController()) && Pawn->GetController<AAIController>())
+		{
+			OnDebugAIPawnRemovedToWorld(Pawn);
+		}
+	}
+}
+
+void UCAIBBehaviorSubsystem::OnDebugAIPawnRemovedToWorld(APawn* InPawn)
+{
+	// shift DebugCurrentTargetIndex if needed
+
+	int32 IndexToRemove = DebugTargetPawns.Find(MakeWeakObjectPtr(InPawn));
+
+	if (IndexToRemove < DebugCurrentTargetIndex)
+	{
+		DebugCurrentTargetIndex--;
+	}
+
+	if (DebugCurrentTargetIndex >= DebugTargetPawns.Num())
+	{
+		// reset
+		DebugCurrentTargetIndex = 0;
+	}
+	
+	DebugTargetPawns.RemoveAt(IndexToRemove);
+}
+
+APawn* UCAIBBehaviorSubsystem::GetTargetDebugAIPawn()
+{
+	if (DebugTargetPawns.IsValidIndex(DebugCurrentTargetIndex))
+	{
+		return DebugTargetPawns[DebugCurrentTargetIndex].Get();
+	}
+	return nullptr;
 }
 #endif

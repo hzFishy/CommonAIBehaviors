@@ -129,6 +129,7 @@ struct COMMONAIBEHAVIORS_API FCAIBTrackedStimulusSource
 	FCAIBAIStimulus LatestStimulus;
 };
 
+/** One container is used per target per perception component */
 USTRUCT()
 struct COMMONAIBEHAVIORS_API FCAIBTrackedSensesContainer
 {
@@ -150,4 +151,5 @@ protected:
 	
 	/** Key: sense gameplay tag, see ICAIBSenseInterface */
 	TMap<FGameplayTag, FCAIBTrackedStimulusSource> PerSenseSources;
+	TMap<TObjectKey<UAISense>, FGameplayTag> CachedSensesTag;
 };

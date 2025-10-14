@@ -10,11 +10,9 @@
 namespace CAIB::Debug
 {
 #if CAIB_WITH_DEBUG
-	/** 0: Disabled, 1: Enabled */
-	extern int32 DebugStatesModeForAllValue;
+	/** 0: disabled, 1: single target, 2: all */
+	extern int32 DebugStatesModeValue;
 	
-	extern float DebugStatesMaxDistanceForAllValue;
-	
-	// TODO: per target version
+	extern float DebugStatesMaxDistanceValue;
 #endif
 }

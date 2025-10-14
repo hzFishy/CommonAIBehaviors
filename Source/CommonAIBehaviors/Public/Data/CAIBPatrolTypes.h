@@ -55,7 +55,7 @@ struct COMMONAIBEHAVIORS_API FCAIBPatrolSplinePointData
 	bool bOverrideAnimationDurationWithWaitTime;
 	
 	// TODO: look at target while waiting
-	// TODO: if multiple AI follow the same spline, adjust hteir pos to be next ot each other
+	// TODO: if multiple AI follow the same spline, adjust their pos to be next ot each other
 };
 
 
@@ -148,9 +148,13 @@ protected:
 	float WaitTargetTime;
 	TOptional<float> PreviousMaxWalkSpeed;
 	int32 CurrentTargetPointIndex;
+	/** Set while moving before reaching the target point, will be copied to SelectedWaitAnim once reached */
+	const FCAIBPatrolSplinePointDataWaitAnimation* SelectedFutureWaitAnim;
 	const FCAIBPatrolSplinePointDataWaitAnimation* SelectedWaitAnim;
-	UPROPERTY()
-	TObjectPtr<UAnimMontage> LoadedWaitAnim;
+	/** Set while moving before reaching the target point, will be copied to LoadedWaitAnim once reached */
+	UPROPERTY() TObjectPtr<UAnimMontage> LoadedFutureWaitAnim;
+	UPROPERTY() TObjectPtr<UAnimMontage> LoadedWaitAnim;
+	TSharedPtr<FStreamableHandle> FutureWaitAnimHandle;
 	
 	int32 PreviousTargetPointIndex;
 
@@ -186,7 +190,7 @@ struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorPatrolSplineData : public FCAIBAIBeh
 	FCAIBAIBehaviorPatrolSplineData();
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Transient)
 	FString StatusMessage;
 
 	void PostSerialize(const FArchive& Ar);

@@ -61,17 +61,21 @@ struct COMMONAIBEHAVIORS_API FCAIBStateTreeCacheId
 
 	bool operator==(const FCAIBStateTreeCacheId& Other) const
 	{
-		return StateTree == Other.StateTree && TaskHandle == Other.TaskHandle;
+		return StateTree == Other.StateTree && TaskHandle == Other.TaskHandle && StateTreeOwner == Other.StateTreeOwner;
 	}
 	
 	friend uint32 GetTypeHash(const FCAIBStateTreeCacheId& Self)
 	{
-		return HashCombineFast(Self.StateTree.GetWeakPtrTypeHash(), GetTypeHash(Self.TaskHandle));
+		return HashCombineFast(
+			HashCombineFast(Self.StateTree.GetWeakPtrTypeHash(), GetTypeHash(Self.TaskHandle)),
+			Self.StateTreeOwner.GetWeakPtrTypeHash()
+		);
 	}
 	
 protected:
 	TWeakObjectPtr<const UStateTree> StateTree;
 	FStateTreeStateHandle TaskHandle;
+	TWeakObjectPtr<UObject> StateTreeOwner;
 };
 
 

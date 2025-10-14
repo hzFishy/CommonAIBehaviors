@@ -142,6 +142,10 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorBaseData
 	UPROPERTY(EditAnywhere, meta=(EditCondition="bOnResumeGoBackToStartLocation"))
 	float GoBackToStartAcceptanceRadius;
 
+	/** If true we will not start the behavior until the first animation is loaded */
+	UPROPERTY(EditAnywhere)
+	bool bAsyncLoadBeforeStarting;
+
 	// TODO: random rotation on start between 2 yaw angles
 };
 
@@ -203,6 +207,15 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorSequenceEntryData
 	TOptional<float> Duration;
 };
 
+UENUM()
+enum class ECAIBStaticIdleSequencerAsyncLoadType
+{
+	/** Don't start the behavior until we loaded everything */
+	AsyncLoadAllBeforeStart,
+	/** Start the behavior and make an async request while we run */
+	AsyncLoadOnStart
+};
+
 /**
  * Sequence of animations and more.
  */
@@ -215,6 +228,8 @@ struct COMMONAIBEHAVIORS_API FCAIBStaticIdleBehaviorSequenceData : public FCAIBS
 
 	virtual TSharedPtr<FCAIBStaticIdleBaseRuntimeData> MakeSharedRuntime() const override;
 
+	UPROPERTY(EditAnywhere)
+	ECAIBStaticIdleSequencerAsyncLoadType AsyncLoadType;
 	
 	UPROPERTY(EditAnywhere)
 	ECAIBStaticIdleBehaviorSequenceType SelectionType;

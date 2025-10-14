@@ -62,21 +62,20 @@ FGameplayTag ICAIBSenseInterface::StaticGetSenseTag(const UObject* Object)
 	return FGameplayTag();
 }
 
+
 UCAIBAISense_Sight::UCAIBAISense_Sight()
 {
 	NotifyType = EAISenseNotifyType::OnEveryPerception;
 }
 
 
-UCAIBAISenseConfig_Sight::UCAIBAISenseConfig_Sight()
-{
-	
-}
+UCAIBAISenseConfig_Sight::UCAIBAISenseConfig_Sight() {}
 
 TSubclassOf<UAISense> UCAIBAISenseConfig_Sight::GetSenseImplementation() const
 {
 	return UCAIBAISense_Sight::StaticClass();
 }
+
 
 FCAIBAIStimulus::FCAIBAIStimulus():
 	Strength(0),
@@ -125,18 +124,26 @@ FCAIBTrackedSensesContainer::FCAIBTrackedSensesContainer(UCAIBAIPerceptionCompon
 
 void FCAIBTrackedSensesContainer::AddOrUpdateSense(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	// TODO: cache to avoid doing this each tick
 	auto* Config = PerceptionComponent->GetSenseConfig(UpdateInfo.Stimulus.Type);
 	auto* Sense = Config->GetSenseImplementation()->GetDefaultObject<UAISense>();
-	
+
 	FGameplayTag FoundSenseTag;
-	if (auto* SenseInterface = Cast<ICAIBSenseInterface>(Sense))
+	if (CachedSensesTag.Contains(Sense))
 	{
-		FoundSenseTag = SenseInterface->GetSenseTag();
+		FoundSenseTag = CachedSensesTag[Sense];
 	}
 	else
 	{
-		FoundSenseTag = ICAIBSenseInterface::StaticGetSenseTag(Sense);
+		if (auto* SenseInterface = Cast<ICAIBSenseInterface>(Sense))
+		{
+			FoundSenseTag = SenseInterface->GetSenseTag();
+		}
+		else
+		{
+			FoundSenseTag = ICAIBSenseInterface::StaticGetSenseTag(Sense);
+		}
+
+		CachedSensesTag.Add(Sense, FoundSenseTag);
 	}
 	
 	if (auto* Entry = PerSenseSources.Find(FoundSenseTag))
@@ -167,14 +174,19 @@ void FCAIBTrackedSensesContainer::AddOrUpdateSense(const FActorPerceptionUpdateI
 
 void FCAIBTrackedSensesContainer::RemoveSense(FGameplayTag SenseTag)
 {
-	PerSenseSources.Remove(SenseTag);
+	FCAIBTrackedStimulusSource RemovedValue;
+	PerSenseSources.RemoveAndCopyValue(SenseTag, RemovedValue);
 
 	PerceptionComponent->OnForgottenSensePerceivedForTargetDelegate.Broadcast(
 		PerceptionComponent.Get(),
 		SenseTag
 	);
 
-	// TODO: remove stimuli in the perception system
+	// remove stimuli in the perception system
+	if (RemovedValue.Target.IsValid())
+	{
+		PerceptionComponent->ForgetActor(RemovedValue.Target.Get());
+	}
 }
 
 

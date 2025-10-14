@@ -12,7 +12,8 @@
 	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
-UCAIBAIBehaviorComponent::UCAIBAIBehaviorComponent()
+UCAIBAIBehaviorComponent::UCAIBAIBehaviorComponent():
+	bBehaviorsEnabled(true)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }

@@ -4,6 +4,7 @@
 #include "Data/CAIBPatrolTypes.h"
 
 #include "AIController.h"
+#include "Asserts/FUAsserts.h"
 #include "Draw/FUDraw.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -358,6 +359,35 @@ void FCAIBPatrolSplineRuntimeData::OnStartedMove()
 		PreviousMaxWalkSpeed = GetTargetCharacter()->GetCharacterMovement()->MaxWalkSpeed;;
 		GetTargetCharacter()->GetCharacterMovement()->MaxWalkSpeed = CurrentPointSplineData.MaxWalkSpeed.GetValue();
 	}
+
+	// select for the future the wait anim to play (if any)
+	if (!CurrentPointSplineData.WaitAnimationsData.IsEmpty())
+	{
+		int32 MaxIndex = CurrentPointSplineData.WaitAnimationsData.Num() - 1;
+		SelectedFutureWaitAnim = &CurrentPointSplineData.WaitAnimationsData[FMath::RandRange(0,  MaxIndex)];
+
+		// can already be loaded
+		if (SelectedFutureWaitAnim->AnimMontage.IsValid())
+		{
+			LoadedFutureWaitAnim = SelectedFutureWaitAnim->AnimMontage.Get();
+			FU_ENSURE(LoadedFutureWaitAnim);
+		}
+		else if (auto* AM = UAssetManager::GetIfInitialized())
+		{
+			FutureWaitAnimHandle = AM->GetStreamableManager().RequestAsyncLoad(
+				SelectedFutureWaitAnim->AnimMontage.ToSoftObjectPath(),
+				FStreamableDelegateWithHandle::CreateLambda([this](TSharedPtr<struct FStreamableHandle> Handle)
+				{
+					if (FU_ENSURE_WEAKVALID(SelectedFutureWaitAnim->AnimMontage))
+					{
+						LoadedFutureWaitAnim = SelectedFutureWaitAnim->AnimMontage.Get();
+						FU_ENSURE(LoadedFutureWaitAnim);
+					}
+				}),
+				50
+			);
+		}
+	}
 }
 
 void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
@@ -389,11 +419,20 @@ void FCAIBPatrolSplineRuntimeData::OnTargetPointReached()
 		}
 		else if (TargetCharacterAnimInstance.IsValid())
 		{
-			int32 MaxIndex = CurrentPointSplineData.WaitAnimationsData.Num() - 1;
-			SelectedWaitAnim = &CurrentPointSplineData.WaitAnimationsData[FMath::RandRange(0,  MaxIndex)];
+			SelectedWaitAnim = SelectedFutureWaitAnim;
 
-			// TODO (perf): async load
-			LoadedWaitAnim = SelectedWaitAnim->AnimMontage.LoadSynchronous();
+			// cancel async request if it wasnt finished
+			if (FutureWaitAnimHandle.IsValid() && !FutureWaitAnimHandle->HasLoadCompleted())
+			{
+				FutureWaitAnimHandle->CancelHandle();
+			}
+			
+			// LoadedFutureWaitAnim is async loaded before reaching the point,
+			// to avoid a weird "idle" pose we sync load when we reach this point if it wasnt loaded yet
+			// so if the async request was completly this will be seemless,
+			// if not a small (should be unnoticeable) freeze will occur
+			LoadedWaitAnim = IsValid(LoadedFutureWaitAnim.Get())
+				? LoadedFutureWaitAnim.Get() : SelectedWaitAnim->AnimMontage.LoadSynchronous();
 			
 			const float MontageDuration = TargetCharacterAnimInstance->Montage_Play(
 				LoadedWaitAnim.Get(),

@@ -52,6 +52,7 @@ public:
 	UPROPERTY(BlueprintAssignable, DisplayName="On Updated Sense Perceived For Target")
 	FCAIBOnUpdatedSensePerceivedForTargetSignature OnUpdatedSensePerceivedForTargetDelegate;
 	
+	/** This will be called before OnTargetPerceptionForgotten */
 	UPROPERTY(BlueprintAssignable, DisplayName="On Forgotten Sense Perceived For Target")
 	FCAIBOnForgottenSensePerceivedForTargetSignature OnForgottenSensePerceivedForTargetDelegate;
 	

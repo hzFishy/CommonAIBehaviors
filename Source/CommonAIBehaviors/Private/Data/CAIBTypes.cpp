@@ -31,7 +31,8 @@ FCAIBStateTreeCacheId::FCAIBStateTreeCacheId() {}
 
 FCAIBStateTreeCacheId::FCAIBStateTreeCacheId(FStateTreeExecutionContext& Context):
 	StateTree(Context.GetStateTree()),
-	TaskHandle(Context.GetCurrentlyProcessedState())
+	TaskHandle(Context.GetCurrentlyProcessedState()),
+	StateTreeOwner(Context.GetOwner())
 {}
 
 FCAIBBehaviorRuntimeDataBase::FCAIBBehaviorRuntimeDataBase():

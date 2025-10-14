@@ -4,6 +4,7 @@
 
 #include "Data/CAIBTypes.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Utility/FUOrientedBox.h"
 #include "CAIBBehaviorSubsystem.generated.h"
 
 
@@ -24,7 +25,6 @@ public:
 
 	/**
 	 * This works as long as there is only one use of task type per state tree.
-	 * TODO: add parent state in the id
 	 */
 	TMap<FCAIBStateTreeCacheId, FCAIBBehaviorId> CachedStateTreeBehaviorIds;
 	
@@ -34,7 +34,12 @@ public:
 	TMap<uint32, FCAIBAIBehaviorDebugMessageEntry> PermanentDebugMessages;
 
 #if CAIB_WITH_DEBUG
-	TWeakObjectPtr<AActor> PlayerActor;
+	TWeakObjectPtr<AActor> DebugPlayerActor;
+
+	FDelegateHandle OnActorAddedToWorldHandle;
+	FDelegateHandle OnActorRemovedToWorldHandle;
+	int32 DebugCurrentTargetIndex;
+	TArray<TWeakObjectPtr<APawn>> DebugTargetPawns;
 #endif
 	
 	
@@ -87,7 +92,27 @@ public:
 protected:
 	void TickBehaviors(float DeltaTime);
 
+	
+	/*----------------------------------------------------------------------------
+		Debug
+	----------------------------------------------------------------------------*/
 #if CAIB_WITH_DEBUG
+public:
+	void GoToNextDebugAIPawn();
+	
+	void GoToPreviousDebugAIPawn();
+	
+protected:
 	void TickDebugMessages(float DeltaTime);
+
+	void OnActorAddedToWorld(AActor* Actor);
+	
+	void OnDebugAIPawnAddedToWorld(APawn* InPawn);
+	
+	void OnActorRemovedToWorld(AActor* Actor);
+	
+	void OnDebugAIPawnRemovedToWorld(APawn* InPawn);
+
+	APawn* GetTargetDebugAIPawn();
 #endif
 };

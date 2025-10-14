@@ -22,6 +22,9 @@ class COMMONAIBEHAVIORS_API UCAIBAIBehaviorComponent : public UActorComponent
 		Properties
 	----------------------------------------------------------------------------*/
 protected:
+	UPROPERTY(EditAnywhere, Category="CommonAIBehaviors", BlueprintReadOnly)
+	bool bBehaviorsEnabled;
+	
 	UPROPERTY(EditAnywhere, DisplayName="AI Behavior Fragments", Category="CommonAIBehaviors", meta=(ExcludeBaseStruct))
 	TArray<TInstancedStruct<FCAIBAIBehaviorBaseFragment>> AIBehaviorFragments;
 
