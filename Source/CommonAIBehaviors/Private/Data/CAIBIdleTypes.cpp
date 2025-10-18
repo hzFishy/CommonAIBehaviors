@@ -35,6 +35,11 @@ void FCAIBStaticIdleBaseRuntimeData::Pause()
 	Super::Pause();
 
 	StopCurrentAnimation();
+
+	if (PathFinishDelegateHandle.IsValid())
+	{
+		PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
+	}
 }
 
 void FCAIBStaticIdleBaseRuntimeData::Resume()
@@ -144,6 +149,8 @@ void FCAIBStaticIdleSingleRuntimeData::Pause()
 FFUMessageBuilder FCAIBStaticIdleSingleRuntimeData::GetDebugState() const
 {
 	if (!IsActive()) { return FFUMessageBuilder(); }
+	
+	if (IsPaused()) { return FFUMessageBuilder("Paused"); }
 
 	if (CachedSingleData->SoftMontage.IsNull())
 	{
@@ -245,6 +252,8 @@ void FCAIBStaticIdleSequenceRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsPaused()) { return; }
+
 	ElapsedTime += DeltaTime;
 
 	if (ElapsedTime >= TargetRelativeTime)
@@ -257,6 +266,8 @@ void FCAIBStaticIdleSequenceRuntimeData::Tick(float DeltaTime)
 FFUMessageBuilder FCAIBStaticIdleSequenceRuntimeData::GetDebugState() const
 {
 	if (!IsActive()) { return FFUMessageBuilder(); }
+
+	if (IsPaused()) { return FFUMessageBuilder("Paused"); }
 
 	if (bMovingToStart)
 	{

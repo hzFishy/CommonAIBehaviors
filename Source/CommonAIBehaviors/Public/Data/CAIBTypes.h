@@ -119,6 +119,8 @@ public:
 	bool HasStarted() const { return bStarted; };
 
 	bool IsActive() const { return bActive; };
+	
+	bool IsPaused() const { return bPaused; };
 
 	void SetTargetActor(AActor* InActor);
 
@@ -146,6 +148,7 @@ protected:
 	TWeakObjectPtr<AActor> TargetActor;
 	/** if active we will call tick */
 	bool bActive;
+	bool bPaused;
 };
 
 

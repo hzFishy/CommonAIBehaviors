@@ -51,6 +51,8 @@ void FCAIBPatrolBaseRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsPaused()) { return; }
+
 	if (CanGoNextPoint())
 	{
 		MoveToNextPoint();
@@ -171,6 +173,7 @@ FCAIBPatrolSplineRuntimeData::FCAIBPatrolSplineRuntimeData():
 	WaitElapsedTime(0),
 	WaitTargetTime(0),
 	CurrentTargetPointIndex(-1),
+	SelectedFutureWaitAnim(nullptr),
 	SelectedWaitAnim(nullptr),
 	PreviousTargetPointIndex(0)
 {}
@@ -222,6 +225,12 @@ void FCAIBPatrolSplineRuntimeData::Pause()
 
 	// stop any anims that might be playing
 	StopPlayingAnim();
+
+	// abort any pending move
+	if (PathFinishDelegateHandle.IsValid())
+	{
+		PathFollowingComponent->OnRequestFinished.Remove(PathFinishDelegateHandle);
+	}
 }
 
 void FCAIBPatrolSplineRuntimeData::Resume()
@@ -253,6 +262,8 @@ void FCAIBPatrolSplineRuntimeData::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsPaused()) { return; }
+
 	WaitElapsedTime += DeltaTime;
 }
 
@@ -260,6 +271,8 @@ void FCAIBPatrolSplineRuntimeData::Tick(float DeltaTime)
 FFUMessageBuilder FCAIBPatrolSplineRuntimeData::GetDebugState() const
 {
 	if (!IsActive()) { return FFUMessageBuilder(); }
+	
+	if (IsPaused()) { return FFUMessageBuilder("Paused"); }
 	
 	auto& CurrentPointSplineData = SplinePointsData[CurrentTargetPointIndex];
 
@@ -344,7 +357,6 @@ void FCAIBPatrolSplineRuntimeData::OnPreStartMove()
 	Super::OnPreStartMove();
 	
 	StopPlayingAnim();
-
 }
 
 void FCAIBPatrolSplineRuntimeData::OnStartedMove()

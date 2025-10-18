@@ -37,7 +37,8 @@ FCAIBStateTreeCacheId::FCAIBStateTreeCacheId(FStateTreeExecutionContext& Context
 
 FCAIBBehaviorRuntimeDataBase::FCAIBBehaviorRuntimeDataBase():
 	bStarted(false),
-	bActive(false)
+	bActive(false),
+	bPaused(false)
 {}
 
 FCAIBBehaviorRuntimeDataBase::~FCAIBBehaviorRuntimeDataBase() {}
@@ -59,12 +60,12 @@ void FCAIBBehaviorRuntimeDataBase::Stop() {}
 
 void FCAIBBehaviorRuntimeDataBase::Pause()
 {
-	bActive = false;
+	bPaused = true;
 }
 
 void FCAIBBehaviorRuntimeDataBase::Resume()
 {
-	bActive = true;
+	bPaused = false;
 }
 
 #if CAIB_WITH_DEBUG
