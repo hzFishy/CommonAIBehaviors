@@ -2,7 +2,6 @@
 
 
 #include "Core/CAIBBehaviorSubsystem.h"
-
 #include "AIController.h"
 #include "EngineUtils.h"
 #include "Asserts/FUAsserts.h"

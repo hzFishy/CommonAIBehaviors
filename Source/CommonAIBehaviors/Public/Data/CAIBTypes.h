@@ -18,6 +18,13 @@ using FU::Utils::FFUMessageBuilder;
 	/*----------------------------------------------------------------------------
 		Core
 	----------------------------------------------------------------------------*/
+enum class ECAIBVisibilityResult
+{
+	Visible,
+	NotVisible,
+	Pending
+};
+
 USTRUCT(BlueprintType, DisplayName="Common AI Behavior Id")
 struct COMMONAIBEHAVIORS_API FCAIBBehaviorId
 {
