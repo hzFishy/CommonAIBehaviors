@@ -5,12 +5,10 @@
 
 #include "NativeGameplayTags.h"
 #include "Perception/AIPerceptionComponent.h"
-#include "Perception/AISenseConfig_Sight.h"
-#include "Perception/AISense_Sight.h"
 #include "CAIBPerceptionTypes.generated.h"
-
-
 class UCAIBAIPerceptionComponent;
+
+
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_SIGHT);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_HEARING);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_AI_SENSES_TOUCH);
@@ -36,37 +34,6 @@ public:
 	static FGameplayTag StaticGetSenseTag(const UObject* Object);
 };
 
-
-UCLASS(DisplayName="Common AI Sense Sight")
-class COMMONAIBEHAVIORS_API UCAIBAISense_Sight : public UAISense_Sight
-{
-	GENERATED_BODY()
-
-	
-	/*----------------------------------------------------------------------------
-		Defaults
-	----------------------------------------------------------------------------*/
-public:
-	UCAIBAISense_Sight();
-};
-
-UCLASS(DisplayName="Common AI Sense Sight Config")
-class COMMONAIBEHAVIORS_API UCAIBAISenseConfig_Sight : public UAISenseConfig_Sight
-{
-	GENERATED_BODY()
-
-	
-	/*----------------------------------------------------------------------------
-		Defaults
-	----------------------------------------------------------------------------*/
-public:
-	UCAIBAISenseConfig_Sight();
-
-	virtual TSubclassOf<UAISense> GetSenseImplementation() const override;
-	
-	// state tree event tag to trigger on first perception
-	// state tree event tag to trigger on perception forgotten
-};
 
 
 USTRUCT(BlueprintType, DisplayName="Common AI Stimulus")

@@ -2,14 +2,16 @@
 
 
 #include "Data/CAIBPerceptionTypes.h"
-
 #include "Components/CAIBAIPerceptionComponent.h"
+#include "Perception/AISenseConfig.h"
 #include "Perception/AISense_Blueprint.h"
 #include "Perception/AISense_Damage.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Prediction.h"
+#include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Team.h"
 #include "Perception/AISense_Touch.h"
+
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_SENSES_SIGHT, "AI.Senses.Sight");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_SENSES_HEARING, "AI.Senses.Hearing");
@@ -63,19 +65,6 @@ FGameplayTag ICAIBSenseInterface::StaticGetSenseTag(const UObject* Object)
 }
 
 
-UCAIBAISense_Sight::UCAIBAISense_Sight()
-{
-	NotifyType = EAISenseNotifyType::OnEveryPerception;
-}
-
-
-UCAIBAISenseConfig_Sight::UCAIBAISenseConfig_Sight() {}
-
-TSubclassOf<UAISense> UCAIBAISenseConfig_Sight::GetSenseImplementation() const
-{
-	return UCAIBAISense_Sight::StaticClass();
-}
-
 
 FCAIBAIStimulus::FCAIBAIStimulus():
 	Strength(0),
@@ -87,8 +76,7 @@ FCAIBAIStimulus::FCAIBAIStimulus():
 	CurrentAge(0),
 	bSuccessfullySensed(0),
 	bExpired(0)
-{
-}
+{}
 
 FCAIBAIStimulus::FCAIBAIStimulus(const FAIStimulus& Stimulus):
 	Strength(Stimulus.Strength),

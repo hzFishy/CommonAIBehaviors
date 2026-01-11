@@ -8,11 +8,12 @@
 #include "Asserts/FUAsserts.h"
 #include "Console/FUConsole.h"
 #include "Core/CAIBCore.h"
+#include "Data/CAIBAIBehaviorObject.h"
 #include "Draw/FUDraw.h"
 #include "Utility/FUOrientedBox.h"
 
-
-/*----------------------------------------------------------------------------
+	
+	/*----------------------------------------------------------------------------
 		Defaults
 	----------------------------------------------------------------------------*/
 UCAIBBehaviorSubsystem::UCAIBBehaviorSubsystem():
@@ -155,6 +156,11 @@ void UCAIBBehaviorSubsystem::RemoveDebugMessage(uint32 Id)
 	PermanentDebugMessages.Remove(Id);
 }
 
+void UCAIBBehaviorSubsystem::AddBehaviorObject(UCAIBAIBehaviorObject* Object)
+{
+	BehaviorObjects.Add(Object);
+}
+
 void UCAIBBehaviorSubsystem::TickBehaviors(float DeltaTime)
 {
 	for (auto It = RuntimeBehaviors.CreateIterator(); It; ++It)
@@ -187,7 +193,7 @@ void UCAIBBehaviorSubsystem::TickBehaviors(float DeltaTime)
 				}
 			}
 			
-			if (bCanDraw)
+			if (bCanDraw && DebugPlayerActor.IsValid() && IsValid(RuntimeData->GetTargetActor()))
 			{
 				const float Distance = FVector::Distance(DebugPlayerActor.Get()->GetActorLocation(), RuntimeData->GetTargetActor()->GetActorLocation());
 
@@ -207,6 +213,19 @@ void UCAIBBehaviorSubsystem::TickBehaviors(float DeltaTime)
 			}
 		}
 #endif
+	}
+
+	for (auto It = BehaviorObjects.CreateIterator(); It; ++It)
+	{
+		auto& BehaviorObject = *It;
+
+		BehaviorObject->Tick(DeltaTime);
+
+		if (BehaviorObject->IsMarkedAsFinished())
+		{
+			BehaviorObject->Stop();
+			It.RemoveCurrent();
+		}
 	}
 }
 

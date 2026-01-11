@@ -4,8 +4,8 @@
 
 #include "Data/CAIBTypes.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "Utility/FUOrientedBox.h"
 #include "CAIBBehaviorSubsystem.generated.h"
+class UCAIBAIBehaviorObject;
 
 
 /**
@@ -32,7 +32,10 @@ public:
 	uint32 LatestPermanentDebugId;
 
 	TMap<uint32, FCAIBAIBehaviorDebugMessageEntry> PermanentDebugMessages;
-
+	
+	UPROPERTY()
+	TArray<TObjectPtr<UCAIBAIBehaviorObject>> BehaviorObjects;
+	
 #if CAIB_WITH_DEBUG
 	TWeakObjectPtr<AActor> DebugPlayerActor;
 
@@ -88,6 +91,9 @@ public:
 	uint32 AddDebugMessage(const FCAIBAIBehaviorDebugMessageEntry& Entry);
 
 	void RemoveDebugMessage(uint32 Id);
+
+	UFUNCTION(BlueprintCallable, Category="Common AI Behaviors")
+	void AddBehaviorObject(UCAIBAIBehaviorObject* Object);
 	
 protected:
 	void TickBehaviors(float DeltaTime);

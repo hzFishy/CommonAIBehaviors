@@ -169,5 +169,3 @@ struct COMMONAIBEHAVIORS_API FCAIBAIBehaviorDebugMessageEntry
 	
 	FFUMessageBuilder MessageBuilder;
 };
-
-	
